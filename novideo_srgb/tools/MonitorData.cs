@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Windows;
 using EDIDParser;
 using EDIDParser.Descriptors;
@@ -30,7 +29,9 @@ namespace novideo_srgb
             Name = Edid.Descriptors.OfType<StringDescriptor>()
                 .FirstOrDefault(x => x.Type == StringDescriptorType.MonitorName)?.Value ?? "<no name>";
 
+            Display = display;
             Path = path;
+            MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2)) + ".icm";
             ClampSdr = clampSdr;
             HdrActive = hdrActive;
 
@@ -44,15 +45,21 @@ namespace novideo_srgb
                     Blue = new Colorimetry.Point { X = Math.Round(coords.BlueX, 3), Y = Math.Round(coords.BlueY, 3) },
                     White = Colorimetry.D65
                 };
+                EdidWhite = new Colorimetry.Point { X = Math.Round(coords.WhiteX, 3), Y = Math.Round(coords.WhiteY, 3) };
+                EdidGamma = Edid.DisplayParameters.DisplayGamma;
             }
             else
             {
                 EdidColorSpace = Colorimetry.sRGB;
+                EdidWhite = Colorimetry.D65;
+                EdidGamma = 2.2;
             }
 
+            KeepWhite = true;
             ProfilePath = "";
             CustomGamma = 2.2;
             CustomPercentage = 100;
+            Resolution = 1024;
         }
 
         public static EDID GetEDID(string path, Display display)
@@ -70,7 +77,7 @@ namespace novideo_srgb
         }
         public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive, bool clampSdr, bool useIcc, string profilePath,
             bool calibrateGamma,
-            int selectedGamma, double customGamma, double customPercentage, int target) :
+            int selectedGamma, double customGamma, double customPercentage, int target, bool keepWhite) :
             this(viewModel, number, display, path, hdrActive, clampSdr)
         {
             UseIcc = useIcc;
@@ -80,14 +87,17 @@ namespace novideo_srgb
             CustomGamma = customGamma;
             CustomPercentage = customPercentage;
             Target = target;
+            KeepWhite = keepWhite;
         }
 
         public int Number { get; }
         public string Name { get; }
         public EDID Edid { get; }
+        public Display Display { get; }
         public string Path { get; }
         public bool ClampSdr { get; set; }
         public bool HdrActive { get; }
+        public string MHCProfileName { get; }
 
         private void UpdateClamp(bool doClamp)
         {
@@ -98,7 +108,6 @@ namespace novideo_srgb
 
             if (!doClamp) return;
 
-            if (_clamped) Thread.Sleep(100);
             if (UseEdid)
                 ;
                 //Novideo.SetColorSpaceConversion(_output, Colorimetry.RGBToRGB(TargetColorSpace, EdidColorSpace));
@@ -214,7 +223,13 @@ namespace novideo_srgb
 
         public int Target { set; get; }
 
+        public bool KeepWhite { set; get; }
+
+        public uint Resolution { set; get; }
+
         public Colorimetry.ColorSpace EdidColorSpace { get; }
+        public Colorimetry.Point EdidWhite { get; }
+        public double EdidGamma { get; }
 
         private Colorimetry.ColorSpace TargetColorSpace => Colorimetry.ColorSpaces[Target];
 

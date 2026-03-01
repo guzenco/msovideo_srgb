@@ -14,6 +14,7 @@ namespace novideo_srgb
         private MonitorData _monitor;
 
         private int _target;
+        private bool _keepWhite;
         private bool _useIcc;
         private string _profilePath;
         private bool _calibrateGamma;
@@ -31,6 +32,7 @@ namespace novideo_srgb
             _monitor = monitor;
 
             _target = monitor.Target;
+            _keepWhite = monitor.KeepWhite;
             _useIcc = monitor.UseIcc;
             _profilePath = monitor.ProfilePath;
             _calibrateGamma = monitor.CalibrateGamma;
@@ -43,6 +45,8 @@ namespace novideo_srgb
         {
             ChangedCalibration |= _monitor.Target != _target;
             _monitor.Target = _target;
+            ChangedCalibration |= _monitor.KeepWhite != _keepWhite;
+            _monitor.KeepWhite = _keepWhite;
             ChangedCalibration |= _monitor.UseIcc != _useIcc;
             _monitor.UseIcc = _useIcc;
             ChangedCalibration |= _monitor.ProfilePath != _profilePath;
@@ -146,6 +150,17 @@ namespace novideo_srgb
                 OnPropertyChanged(nameof(EdidWarning));
             }
             get => _target;
+        }
+
+        public bool KeepWhite
+        {
+            set
+            {
+                if (value == _keepWhite) return;
+                _keepWhite = value;
+                OnPropertyChanged();
+            }
+            get => _keepWhite;
         }
 
         public Visibility HdrWarning => _monitor.HdrActive ? Visibility.Visible : Visibility.Collapsed;
