@@ -8,6 +8,31 @@ namespace novideo_srgb
         public Matrix matrix = Matrix.Zero3x3();
         public ToneCurve[] trcs = new ToneCurve[3];
         public ToneCurve[] vcgt;
+        public Matrix whitePoint = null;
+        public Matrix blackPoint = null;
+        public double luminance = 80;
+
+        public double trcBlack
+        {
+            get
+            {
+                var trcBlacks = Matrix.FromValues(new[,]
+                    {
+                        { trcs[0].SampleAt(0) },
+                        { trcs[1].SampleAt(0) },
+                        { trcs[2].SampleAt(0) }
+                    });
+                return (matrix * trcBlacks)[1];
+            }
+        }
+
+        public double tagBlack
+        {
+            get
+            {
+                return blackPoint != null ? blackPoint[1] : trcBlack;
+            }
+        }
 
         private ICCMatrixProfile()
         {
@@ -267,6 +292,36 @@ namespace novideo_srgb
 
                             result.vcgt[j] = new LutToneCurve(values);
                         }
+                    }
+                    else if (tagSig == "bkpt")
+                    {
+                        reader.ReadUInt32();
+                        reader.ReadUInt32();
+
+                        result.blackPoint = Matrix.Zero3x1();
+                        for (int j = 0; j < 3; j++)
+                        {
+                            result.blackPoint[j] = reader.ReadS15Fixed16();
+                        }
+                    }
+                    else if (tagSig == "wtpt")
+                    {
+                        reader.ReadUInt32();
+                        reader.ReadUInt32();
+
+                        result.whitePoint = Matrix.Zero3x1();
+                        for (int j = 0; j < 3; j++)
+                        {
+                            result.whitePoint[j] = reader.ReadS15Fixed16();
+                        }
+                    }
+                    else if (tagSig == "lumi")
+                    {
+                        reader.ReadUInt32();
+                        reader.ReadUInt32();
+                        reader.ReadS15Fixed16();
+
+                        result.luminance = reader.ReadS15Fixed16();
                     }
                 }
 
