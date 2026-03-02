@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Navigation;
+using System.Linq;
 
 namespace msovideo_srgb
 {
@@ -7,6 +8,8 @@ namespace msovideo_srgb
     {
         public AboutWindow()
         {
+            Version = string.Join(".",System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString().Split('.').Take(3));
+            DataContext = this;
             InitializeComponent();
         }
 
@@ -18,5 +21,6 @@ namespace msovideo_srgb
             };
             System.Diagnostics.Process.Start(processStartInfo);
         }
+        public static string Version { get; set; }
     }
 }
