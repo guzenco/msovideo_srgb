@@ -33,6 +33,7 @@
                         <ComboBoxItem>Display P3</ComboBoxItem>
                         <ComboBoxItem>Adobe RGB</ComboBoxItem>
                         <ComboBoxItem>BT.2020</ComboBoxItem>
+                        <ComboBoxItem>Native</ComboBoxItem>
                     </ComboBox>
                     <CheckBox IsChecked="{Binding KeepWhite}" VerticalAlignment="Center"  Margin="6,0,0,0">Keep White</CheckBox>
                 </StackPanel>

@@ -12,11 +12,15 @@ namespace novideo_srgb
 
         private static void AddMatrix(ICCProfileGenerator profileGenerator, Colorimetry.ColorSpace target)
         {
-            var srgbXYZ = Colorimetry.RGBToPCSXYZ(target);
+            var matrixXYZ = Colorimetry.RGBToPCSXYZ(target);
+            AddMatrix(profileGenerator, matrixXYZ);
+        }
 
-            profileGenerator.AddTag("rXYZ", ICCProfileGenerator.MakeXYZTag(srgbXYZ[0, 0], srgbXYZ[1, 0], srgbXYZ[2, 0]));
-            profileGenerator.AddTag("gXYZ", ICCProfileGenerator.MakeXYZTag(srgbXYZ[0, 1], srgbXYZ[1, 1], srgbXYZ[2, 1]));
-            profileGenerator.AddTag("bXYZ", ICCProfileGenerator.MakeXYZTag(srgbXYZ[0, 2], srgbXYZ[1, 2], srgbXYZ[2, 2]));
+        private static void AddMatrix(ICCProfileGenerator profileGenerator, Matrix matrixXYZ)
+        {
+            profileGenerator.AddTag("rXYZ", ICCProfileGenerator.MakeXYZTag(matrixXYZ[0, 0], matrixXYZ[1, 0], matrixXYZ[2, 0]));
+            profileGenerator.AddTag("gXYZ", ICCProfileGenerator.MakeXYZTag(matrixXYZ[0, 1], matrixXYZ[1, 1], matrixXYZ[2, 1]));
+            profileGenerator.AddTag("bXYZ", ICCProfileGenerator.MakeXYZTag(matrixXYZ[0, 2], matrixXYZ[1, 2], matrixXYZ[2, 2]));
         }
 
         private static void AddCurve(ICCProfileGenerator profileGenerator, ToneCurve curve, uint resolution)
@@ -44,10 +48,20 @@ namespace novideo_srgb
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(80));
 
-            AddMatrix(profileGenerator, targetColorSpace);
             AddCurve(profileGenerator, new GammaToneCurve(gamma), resolution);
 
-            var matrix = Colorimetry.CreateMatrix(originColorSpace, targetColorSpace);
+            Matrix matrix;
+            if (!targetColorSpace.Equals(Colorimetry.Native))
+            {
+                AddMatrix(profileGenerator, targetColorSpace);
+                matrix = Colorimetry.CreateMatrix(originColorSpace, targetColorSpace);
+            }
+            else
+            {
+                AddMatrix(profileGenerator, originColorSpace);
+                matrix = Matrix.FromDiagonal(new double[] { 1, 1, 1 });
+            }
+            
             double[][] luts = new double[][] { new double[] { 0, 1 }, new double[] { 0, 1 }, new double[] { 0, 1 } };
 
             profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(0, 80, matrix, luts));
@@ -72,12 +86,21 @@ namespace novideo_srgb
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(profile.luminance));
 
-            AddMatrix(profileGenerator, targetColorSpace);
             AddCurve(profileGenerator, curve, resolution);
 
-            var matrix = Colorimetry.CreateMatrix(profile.matrix, targetColorSpace);
-            double[][] luts;
+            Matrix matrix;
+            if (!targetColorSpace.Equals(Colorimetry.Native))
+            {
+                AddMatrix(profileGenerator, targetColorSpace);
+                matrix = Colorimetry.CreateMatrix(profile.matrix, targetColorSpace);
+            }
+            else
+            {
+                AddMatrix(profileGenerator, profile.matrix);
+                matrix = Matrix.FromDiagonal(new double[] { 1, 1, 1 });
+            }
 
+            double[][] luts;
             if (gamma != null)
             {
                 luts = new double[3][];

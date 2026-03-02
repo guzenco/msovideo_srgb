@@ -93,7 +93,9 @@ namespace novideo_srgb
             White = D65
         };
 
-        public static ColorSpace[] ColorSpaces => new[] { sRGB, DisplayP3, AdobeRGB, BT2020 };
+        public static ColorSpace Native = new ColorSpace();
+
+        public static ColorSpace[] ColorSpaces => new[] { sRGB, DisplayP3, AdobeRGB, BT2020, Native };
 
         public static Matrix D50 = Matrix.FromValues(new[,] { { 0.9642 }, { 1 }, { 0.8249 } });
 
