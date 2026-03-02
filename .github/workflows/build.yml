@@ -1,0 +1,53 @@
+name: Build .NET Framework
+
+on:
+  workflow_dispatch:
+    inputs:
+        version:
+          description: 'Build version'
+          required: true
+          default: '0.0.0'
+  workflow_call:
+    inputs:
+        version:
+          description: 'Build version'
+          required: true
+          type: string
+          
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.3.1
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v1.2.0
+
+      - name: Restore NuGet packages
+        run: nuget restore msovideo_srgb.sln
+
+      - name: Generate AssemblyInfo
+        run: |
+          Add-Content -Path "msovideo_srgb/Properties/AssemblyInfo.cs" -Value '[assembly: AssemblyVersion("${{ github.event.inputs.version }}")]'
+
+      - name: Build solution
+        run: msbuild msovideo_srgb.sln /p:Configuration=Release
+      - name: Prepare output folder
+        run: |
+          mkdir output
+          copy msovideo_srgb\bin\x64\Release\*.exe output\
+          copy msovideo_srgb\bin\x64\Release\*.dll output\
+          copy LICENSE output\
+          copy LICENSE-THIRD-PARTY output\
+
+      # Upload the output folder as artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: output/
