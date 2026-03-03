@@ -39,11 +39,11 @@ namespace msovideo_srgb
 
             if (keepWhite)
             {
-                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(Colorimetry.D65)));
+                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(white)));  
             }
             else
             {
-                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(white)));
+                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(Colorimetry.D65)));
             }
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(80));
@@ -75,28 +75,29 @@ namespace msovideo_srgb
 
             AddDesc(profileGenerator, profileName);
 
-            if (keepWhite)
-            {
-                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(Colorimetry.D65)));
-            }
-            else
-            {
-                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(profile.whitePoint));
-            }
-
-
             AddCurve(profileGenerator, curve, resolution);
 
-            Matrix matrix;
+            Matrix matrixCSC = Matrix.FromDiagonal(Matrix.One3x1());
             if (!targetColorSpace.Equals(Colorimetry.Native))
             {
                 AddMatrix(profileGenerator, targetColorSpace);
-                matrix = Colorimetry.CreateMatrix(profile.matrix, targetColorSpace);
+                matrixCSC = Colorimetry.CreateMatrix(profile.matrix, targetColorSpace);
             }
             else
             {
                 AddMatrix(profileGenerator, profile.matrix);
-                matrix = Matrix.FromDiagonal(new double[] { 1, 1, 1 });
+            }
+
+            Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
+            if (keepWhite)
+            {
+                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(profile.whitePoint));
+            }
+            else
+            {
+                Matrix targetWhite = Colorimetry.RGBToXYZ(Colorimetry.D65);
+                matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, targetWhite);
+                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(targetWhite));
             }
 
             double luminance = profile.luminance;
@@ -136,6 +137,8 @@ namespace msovideo_srgb
             {
                 luts = new double[][] { new double[] { 0, 1 }, new double[] { 0, 1 }, new double[] { 0, 1 } };
             }
+
+            Matrix matrix = matrixCSC * matrixWhite;
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(luminance));
 

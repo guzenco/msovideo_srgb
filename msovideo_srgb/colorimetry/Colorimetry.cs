@@ -99,6 +99,13 @@ namespace msovideo_srgb
 
         public static Matrix D50 = Matrix.FromValues(new[,] { { 0.9642 }, { 1 }, { 0.8249 } });
 
+        private static Matrix Badford = Matrix.FromValues(new[,]
+        {
+            { 0.8951, 0.2664, -0.1614 },
+            { -0.7502, 1.7135, 0.0367 },
+            { 0.0389, -0.0685, 1.0296 }
+        });
+
         public static Matrix RGBToXYZ(ColorSpace colorSpace)
         {
             var red = colorSpace.Red;
@@ -139,20 +146,15 @@ namespace msovideo_srgb
         public static Matrix RGBToAdaptedXYZ(ColorSpace colorspace, Matrix whiteXYZ)
         {
             var xyz = RGBToXYZ(colorspace);
-            var bradford = Matrix.FromValues(new[,]
-            {
-                { 0.8951, 0.2664, -0.1614 },
-                { -0.7502, 1.7135, 0.0367 },
-                { 0.0389, -0.0685, 1.0296 }
-            });
+
             var ws = colorspace.White;
-            var aws = bradford * Matrix.FromValues(new[,]
+            var aws = Badford * Matrix.FromValues(new[,]
             {
                 { ws.X / ws.Y }, { 1 }, { (1 - ws.X - ws.Y) / ws.Y }
             });
-            var awd = bradford * whiteXYZ;
-            var m = bradford.Inverse() * Matrix.FromDiagonal(new[]
-                { awd[0] / aws[0], awd[1] / aws[1], awd[2] / aws[2] }) * bradford;
+            var awd = Badford * whiteXYZ;
+            var m = Badford.Inverse() * Matrix.FromDiagonal(new[]
+                { awd[0] / aws[0], awd[1] / aws[1], awd[2] / aws[2] }) * Badford;
             return m * xyz;
         }
 
@@ -186,25 +188,16 @@ namespace msovideo_srgb
             return XYZScale(matrix, D50);
         }
 
+
         public static Matrix CreateMatrix(ColorSpace origin, ColorSpace target)
         {
             return RGBToXYZ(target) * XYZToRGB(origin);
         }
 
-        private static Matrix Adaptation(Matrix origin, ColorSpace target)
+        public static Matrix WhiteToWhiteAdaptation(Matrix sourceWhite, Matrix targetWhite)
         {
-            var bradford = Matrix.FromValues(new[,]
-            {
-                { 0.8951, 0.2664, -0.1614 },
-                { -0.7502, 1.7135, 0.0367 },
-                { 0.0389, -0.0685, 1.0296 }
-            });
-
-            var sourceWhite = RGBToXYZ(D65);
-            var targetWhite = D50;
-
-            var sourceCone = bradford * sourceWhite;
-            var targetCone = bradford * targetWhite;
+            var sourceCone = Badford * sourceWhite;
+            var targetCone = Badford * targetWhite;
 
             var scale = Matrix.FromDiagonal(new[]
             {
@@ -213,12 +206,12 @@ namespace msovideo_srgb
                 targetCone[2] / sourceCone[2]
             });
 
-            return bradford.Inverse() * scale * bradford;
+            return Badford.Inverse() * scale * Badford;
         }
 
         public static Matrix CreateMatrix(Matrix origin, ColorSpace target)
         {
-            return RGBToXYZ(target) * origin.Inverse() * Adaptation(origin, target);
+            return RGBToXYZ(target) * origin.Inverse() * WhiteToWhiteAdaptation(RGBToXYZ(D65), D50);
         }
     }
 }
