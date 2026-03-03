@@ -213,7 +213,7 @@ namespace msovideo_srgb
             return data;
         }
 
-        public static byte[] MakeMHC2(double minLuminance, double peakLuminance, Matrix matrix = null, double[][] curves = null)
+        public static byte[] MakeMHC2(double minLuminance, double peakLuminance, Matrix matrix, double[][] curves = null)
         {
             double[,] dMatrix = null;
             if (matrix != null)

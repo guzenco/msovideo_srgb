@@ -31,7 +31,7 @@ namespace msovideo_srgb
 
             Display = display;
             Path = path;
-            MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2)) + ".icm";
+            MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2));
             ClampSdr = clampSdr;
             HdrActive = hdrActive;
 
@@ -99,6 +99,7 @@ namespace msovideo_srgb
         public bool ClampSdr { get; set; }
         public bool HdrActive { get; }
         public string MHCProfileName { get; }
+        public string MHCProfileNameSDR => "[SDR] " + MHCProfileName + ".icm";
 
         private void UpdateClamp(bool doClamp)
         {
@@ -106,23 +107,16 @@ namespace msovideo_srgb
 
             if (_clamped)
             {
-                if (!HdrActive)
+                if (DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR))
                 {
-                    if (DisplayColorProfileManager.GetProfile(Display).Equals(MHCProfileName))
-                    {
-                        DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileName);
-                    }
-                }
-                else
-                {
-                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileName);
+                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameSDR, false);
                 }
             }
 
             if (!doClamp) return;
 
             if (UseEdid)
-                ColorProfileFactory.CreateProfile(MHCProfileName, CurveResolution, KeepWhite, EdidColorSpace, TargetColorSpace, EdidWhite, EdidGamma);
+                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, EdidColorSpace, TargetColorSpace, EdidWhite, EdidGamma);
             else if (UseIcc)
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePath);
@@ -160,22 +154,21 @@ namespace msovideo_srgb
                             throw new NotSupportedException("Unsupported gamma type " + SelectedGamma);
                     }
 
-                    ColorProfileFactory.CreateProfile(MHCProfileName, CurveResolution, KeepWhite, profile, TargetColorSpace, curve, gamma);
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, curve, gamma);
                 }
                 else
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileName, CurveResolution, KeepWhite, profile, TargetColorSpace, new GammaToneCurve(EdidGamma));
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, new GammaToneCurve(EdidGamma));
                 }
             }
-
-            DisplayColorProfileManager.AddAssociation(Display, MHCProfileName);
-            DisplayColorProfileManager.SetProfile(Display, MHCProfileName);
+            DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameSDR, false);
+            DisplayColorProfileManager.SetProfile(Display, MHCProfileNameSDR, false);
         }
 
         private void HandleClampException(Exception e)
         {
             MessageBox.Show(e.Message);
-            _clamped = DisplayColorProfileManager.GetProfile(Display).Equals(MHCProfileName);
+            _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR);
             ClampSdr = _clamped;
             _viewModel.SaveConfig();
             OnPropertyChanged(nameof(Clamped));
@@ -250,7 +243,7 @@ namespace msovideo_srgb
         public Colorimetry.Point EdidWhite { get; }
         public double EdidGamma { get; }
 
-        private Colorimetry.ColorSpace TargetColorSpace => Colorimetry.ColorSpaces[Target];
+        private Colorimetry.ColorSpace TargetColorSpace => !HdrActive ? Colorimetry.ColorSpaces[Target]: Colorimetry.Native;
 
         private uint[] Resolutions = new uint[] { 256, 1024, 4096 };
         private uint CurveResolution => Resolutions[Resolution];

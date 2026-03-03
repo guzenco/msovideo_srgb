@@ -23,11 +23,15 @@ namespace msovideo_srgb
 
         internal enum COLORPROFILESUBTYPE : uint
         {
-            CPST_NONE = 0,
-            CPST_RGB_WORKING_SPACE = 1,
-            CPST_CUSTOM_WORKING_SPACE = 2,
-            CPST_STANDARD_DISPLAY_COLORSPACE = 3,
-            CPST_EXTENDED_DISPLAY_COLORSPACE = 4
+            CPST_PERCEPTUAL = 0,
+            CPST_RELATIVE_COLORIMETRIC = 1,
+            CPST_SATURATION = 2,
+            CPST_ABSOLUTE_COLORIMETRIC = 3,
+            CPST_NONE = 4,
+            CPST_RGB_WORKING_SPACE = 5,
+            CPST_CUSTOM_WORKING_SPACE = 6,
+            CPST_STANDARD_DISPLAY_COLOR_MODE = 7,
+            CPST_EXTENDED_DISPLAY_COLOR_MODE = 8
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -157,7 +161,7 @@ namespace msovideo_srgb
             uint sourceID);
 
 
-        public static void AddAssociation(Display display, string profileName)
+        public static void AddAssociation(Display display, string profileName, bool hdr)
         {
             var luidAndSource = FindAdapterAndSource(display.DisplayName);
             int hr = ColorProfileAddDisplayAssociation(
@@ -166,12 +170,12 @@ namespace msovideo_srgb
                 luidAndSource.Item1,
                 luidAndSource.Item2,
                 false,
-                false);
+                hdr);
 
             if (hr != 0) Marshal.ThrowExceptionForHR(hr);
         }
 
-        public static void RemoveAssociation(Display display, string profileName)
+        public static void RemoveAssociation(Display display, string profileName, bool hdr)
         {
             var luidAndSource = FindAdapterAndSource(display.DisplayName);
             int hr = ColorProfileRemoveDisplayAssociation(
@@ -179,11 +183,11 @@ namespace msovideo_srgb
                 profileName,
                 luidAndSource.Item1,
                 luidAndSource.Item2,
-                false);
+                hdr);
 
             if (hr != 0) Marshal.ThrowExceptionForHR(hr);
         }
-        public static string GetProfile(Display display)
+        public static string GetProfile(Display display, bool hdr)
         {
             var luidAndSource = FindAdapterAndSource(display.DisplayName);
 
@@ -193,7 +197,7 @@ namespace msovideo_srgb
                 luidAndSource.Item1,
                 luidAndSource.Item2,
                 COLORPROFILETYPE.CPT_ICC,
-                COLORPROFILESUBTYPE.CPST_NONE,
+                hdr ? COLORPROFILESUBTYPE.CPST_EXTENDED_DISPLAY_COLOR_MODE : COLORPROFILESUBTYPE.CPST_STANDARD_DISPLAY_COLOR_MODE,
                 out profileNamePtr);
 
             if (Marshal.GetExceptionForHR(hr) is FileNotFoundException)
@@ -216,7 +220,7 @@ namespace msovideo_srgb
             return profileName;
         }
 
-        public static void SetProfile(Display display, string profilePath)
+        public static void SetProfile(Display display, string profilePath, bool hdr)
         {
             var luidAndSource = FindAdapterAndSource(display.DisplayName);
 
@@ -224,7 +228,7 @@ namespace msovideo_srgb
                 WcsProfileManagementScope.CurrentUser,
                 profilePath,
                 COLORPROFILETYPE.CPT_ICC,
-                COLORPROFILESUBTYPE.CPST_NONE,
+                hdr ? COLORPROFILESUBTYPE.CPST_EXTENDED_DISPLAY_COLOR_MODE : COLORPROFILESUBTYPE.CPST_STANDARD_DISPLAY_COLOR_MODE,
                 luidAndSource.Item1,
                 luidAndSource.Item2);
 
