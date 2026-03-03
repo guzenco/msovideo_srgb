@@ -7,7 +7,7 @@ ICC profiles are also supported and can be used in two different ways. By defaul
 
 The tool generates and applies an ICC profile that contains idealized display characteristics under MHC2 tag corrections. In other words, this profile describes the display as ideally matching the selected color space and gamma, allowing software that supports ICC profiles to deliver accurate and consistent results.
 
-Generated ICC profiles are applied only as SDR profiles, so they don’t interfere with HDR profiles or HDR mode itself.
+For HDR mode, ICC profiles can be used to calibrate display gamma to PQ ST2084 (hard clip) and to provide measured static metadata. For more details, see the section "Notes for HDR calibration" below.
 
 # System requirements
 
@@ -26,7 +26,7 @@ Windows 10, version 2004:
 # Usage
 Extract `release.zip` somewhere under your user directory and run `msovideo_srgb.exe`. To enable/disable the sRGB clamp for a monitor, simply toggle the "Clamped" checkbox. For using ICC profiles and configuring dithering, click the "Advanced" button.
 
-Generally, the clamp should persist through reboots and driver updates, but it can break sometimes. You can choose to leave the application running minimized in the background to have it automatically reapply the clamp. 
+Generally, the clamp should persist through reboots and updates, but it can break sometimes. You can choose to leave the application running minimized in the background to have it automatically reapply the clamp. 
 
 # Notes for use with EDID data
 * If the checkbox for a monitor is locked, it means that the EDID is reporting the sRGB primaries as the monitor's primaries, so the monitor is either natively sRGB or uses an sRGB emulation mode by default. If this is not the case, complain to the manufacturer about the EDID being wrong, and try to find an ICC profile for your monitor to use instead of the EDID data.
@@ -39,7 +39,31 @@ Generally, the clamp should persist through reboots and driver updates, but it c
 * To achieve optimal results, consider creating a custom testchart in DisplayCAL with a high number of neutral (grayscale) patches, such as 256. With that, a grayscale calibration (setting "Tone curve" to anything other than "As measured") should be unnecessary unless your display lacks RGB gain controls, but can lead to better accuracy on some poorly behaved displays. The number of colored patches should not matter much. Additionally, configuring DisplayCAL to generate a "Curves + matrix" profile with "Black point compensation" disabled should also result in a lower average error than using an XYZ LUT profile. This advice is based on what worked well for a handful of users, so if you have anything else to add, please let me know.
 * Only the VCGT (if present), TRC and PCS matrix parts of an ICC profile are used. If present, the A2B1 data is used to calculate (hopefully) higher quality TRC and PCS matrix values.
 * The sRGB gamma option provides the best ΔE.
-* Native mode is recommended for ACM (Auto Color Managment).
+
+# Notes for HDR calibration
+
+HDR calibration requier separate profile measured in HDR mode.
+Recomended settings:
+* In calibration tab: Everything set to "As measured".
+* In profile tab:
+  * Profile type: Curves + matrix ("Black point compensation" disable)
+  * Profile quality: Hight
+  * Testchart: Small testchart for matrix profiles (with a high number of neutral (grayscale) patches, such as 256)
+
+Measure targets must be displayed in HDR (not SDR via HDR) format. To achive this, you can use [dogegen](https://github.com/ledoge/dogegen):
+ 1. Select Display to Resolve in DisplayCAL.
+ 2. Start calibration.
+ 3. Run dodgen with:
+```
+dogegen.exe "resolve_hdr 127.0.0.1"
+```
+ 4. Measure targets displayed in the dogegen window.
+
+Tool settings:
+* Peak target: Limits display luminance in HDR mode. Limits display luminance in HDR mode. It will be ignored if higher than the display profile luminance.
+* BPC threshold: Prevents black crush by linearly scaling `[profile black, threshold]` to `[0, threshold]`.
+
+In HDR mode, the target color space is treated as Native.
 
 # Known issues
 
