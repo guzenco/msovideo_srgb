@@ -59,7 +59,10 @@ namespace msovideo_srgb
             public Point White;
         }
 
+        public static Point NativeWhite = new Point ();
+        public static Point D50_xy = new Point { X = 0.3457, Y = 0.3585 };
         public static Point D65 = new Point { X = 0.3127, Y = 0.3290 };
+        public static Point D93 = new Point { X = 0.2831, Y = 0.2971 };
 
         public static ColorSpace sRGB = new ColorSpace
         {

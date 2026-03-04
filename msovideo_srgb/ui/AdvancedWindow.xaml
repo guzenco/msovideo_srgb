@@ -39,7 +39,6 @@
                         <ComboBoxItem>BT.2020</ComboBoxItem>
                         <ComboBoxItem>Native</ComboBoxItem>
                     </ComboBox>
-                    <CheckBox IsChecked="{Binding KeepWhite}" VerticalAlignment="Center"  Margin="6,0,0,0">Keep White</CheckBox>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock VerticalAlignment="Center" Text="Curve resolution" />
@@ -51,6 +50,38 @@
                 </StackPanel>
                 <GroupBox Header="SDR">
                     <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6" >
+                            <TextBlock VerticalAlignment="Center" Text="Target White" />
+                            <ComboBox SelectedIndex="{Binding TargetWhite}" Margin="6,0,0,0">
+                                <ComboBoxItem>Native</ComboBoxItem>
+                                <ComboBoxItem>D50</ComboBoxItem>
+                                <ComboBoxItem>D65</ComboBoxItem>
+                                <ComboBoxItem>D93</ComboBoxItem>
+                                <ComboBoxItem>Custom</ComboBoxItem>
+                            </ComboBox>
+                            <StackPanel Visibility="{Binding UseCustomWhite, Mode=OneWay}" Orientation="Horizontal" >
+                                <TextBox Style="{StaticResource TextBoxInError}"  VerticalContentAlignment="Center" Width="45" Margin="6,0,0,0">
+                                    <TextBox.Text>
+                                        <Binding Path="CustomWhiteX" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <local:RangeRule Min="0" Max="1" />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
+                                <TextBlock Text="x" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                                <TextBox Style="{StaticResource TextBoxInError}"  VerticalContentAlignment="Center" Width="45" Margin="6,0,0,0">
+                                    <TextBox.Text>
+                                        <Binding Path="CustomWhiteY" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <local:RangeRule Min="0" Max="1" />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
+                                <TextBlock Text="x" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
                         <RadioButton IsChecked="{Binding UseEdid}" Margin="0,0,0, 6">
                             <StackPanel IsEnabled="{Binding UseEdid}">
                                 <TextBlock Text="Use EDID primaries" Margin="0,0,0,0" />
@@ -172,6 +203,38 @@
                 </GroupBox >
                 <GroupBox Header="HDR">
                     <StackPanel>
+                        <StackPanel IsEnabled="{Binding UseIccHDR}" Orientation="Horizontal" Margin="0,0,0,6" >
+                            <TextBlock VerticalAlignment="Center" Text="Target White" />
+                            <ComboBox SelectedIndex="{Binding TargetWhiteHDR}" Margin="6,0,0,0">
+                                <ComboBoxItem>Native</ComboBoxItem>
+                                <ComboBoxItem>D50</ComboBoxItem>
+                                <ComboBoxItem>D65</ComboBoxItem>
+                                <ComboBoxItem>D93</ComboBoxItem>
+                                <ComboBoxItem>Custom</ComboBoxItem>
+                            </ComboBox>
+                            <StackPanel Visibility="{Binding UseCustomWhiteHDR, Mode=OneWay}" Orientation="Horizontal" >
+                                <TextBox Style="{StaticResource TextBoxInError}"  VerticalContentAlignment="Center" Width="45" Margin="6,0,0,0">
+                                    <TextBox.Text>
+                                        <Binding Path="CustomWhiteHdrX" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <local:RangeRule Min="0" Max="1" />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
+                                <TextBlock Text="x" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                                <TextBox Style="{StaticResource TextBoxInError}"  VerticalContentAlignment="Center" Width="45" Margin="6,0,0,0">
+                                    <TextBox.Text>
+                                        <Binding Path="CustomWhiteHdrY" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <local:RangeRule Min="0" Max="1" />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
+                                <TextBlock Text="x" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
                         <CheckBox IsChecked="{Binding UseIccHDR}" HorizontalContentAlignment="Stretch">
                             <StackPanel IsEnabled="{Binding UseIccHDR}" Margin="0,0,0,0">
                                 <TextBlock Text="Use ICC profile" Margin="0,0,0,6" />
@@ -184,8 +247,8 @@
                                         <TextBox IsEnabled="False" Grid.Column="0" IsReadOnly="True" Text="{Binding ProfileNameHDR, Mode=OneWay}" />
                                         <Button Grid.Column="1" Content="Browse..." Click="Browse_Click_HDR" Width="75" Margin="6,0,0,0" />
                                     </Grid>
-                                    <StackPanel Orientation="Horizontal"  Height="22">
-                                        <CheckBox IsChecked="{Binding CalibrateGammaHDR}" VerticalAlignment="Center">Calibrate gamma to SMPTE 2084</CheckBox>
+                                    <StackPanel Orientation="Horizontal" Height="22" >
+                                        <CheckBox IsChecked="{Binding CalibrateGammaHDR}" VerticalAlignment="Center" >Calibrate gamma to SMPTE 2084</CheckBox>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="with" VerticalAlignment="Center"/>

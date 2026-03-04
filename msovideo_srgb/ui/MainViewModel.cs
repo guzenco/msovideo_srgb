@@ -92,14 +92,19 @@ namespace msovideo_srgb
                         (int)settings.Attribute("selected_gamma"),
                         (double)settings.Attribute("custom_gamma"),
                         (double)settings.Attribute("custom_percentage"),
+                        (int?)settings.Attribute("target_white") ?? 0,
+                        (double?)settings.Attribute("custom_white_x") ?? Colorimetry.D65.X,
+                        (double?)settings.Attribute("custom_white_y") ?? Colorimetry.D65.Y,
                         (int)settings.Attribute("target"),
-                        (bool?)settings.Attribute("keep_white") ?? true,
                         (int?)settings.Attribute("resolution") ?? 2,
                         (bool?)settings.Attribute("use_icc_hdr") ?? false,
                         (string)settings.Attribute("icc_path_hdr") ?? "",
                         (bool?)settings.Attribute("calibrate_gamma_hdr") ?? false,
                         (int?)settings.Attribute("target_peak") ?? 10000,
-                        (double?)settings.Attribute("bpc_threshold") ?? 80);
+                        (double?)settings.Attribute("bpc_threshold") ?? 80,
+                        (int?)settings.Attribute("target_white_hdr") ?? 0,
+                        (double?)settings.Attribute("custom_white_hdr_x") ?? Colorimetry.D65.X,
+                        (double?)settings.Attribute("custom_white_hdr_y") ?? Colorimetry.D65.Y);
                 }
                 else
                 {
@@ -140,14 +145,19 @@ namespace msovideo_srgb
                             new XAttribute("selected_gamma", x.SelectedGamma),
                             new XAttribute("custom_gamma", x.CustomGamma),
                             new XAttribute("custom_percentage", x.CustomPercentage),
+                            new XAttribute("target_white", x.TargetWhite),
+                            new XAttribute("custom_white_x", x.CustomWhiteX),
+                            new XAttribute("custom_white_y", x.CustomWhiteY),
                             new XAttribute("target", x.Target),
-                            new XAttribute("keep_white", x.KeepWhite),
                             new XAttribute("resolution", x.Resolution),
                             new XAttribute("use_icc_hdr", x.UseIccHDR),
                             new XAttribute("icc_path_hdr", x.ProfilePathHDR),
                             new XAttribute("calibrate_gamma_hdr", x.CalibrateGammaHDR),
                             new XAttribute("target_peak", x.TargetPeak),
-                            new XAttribute("bpc_threshold", x.BPCThreshold))));
+                            new XAttribute("bpc_threshold", x.BPCThreshold),
+                            new XAttribute("target_white_hdr", x.TargetWhiteHDR),
+                            new XAttribute("custom_white_hdr_x", x.CustomWhiteHdrX),
+                            new XAttribute("custom_white_hdr_y", x.CustomWhiteHdrY))));
                 xElem.Save(_configPath);
             }
             catch (Exception ex)

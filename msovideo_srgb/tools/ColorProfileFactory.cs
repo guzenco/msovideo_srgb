@@ -32,20 +32,20 @@ namespace msovideo_srgb
             profileGenerator.AddTag("bTRC", tagData);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, bool keepWhite, Colorimetry.ColorSpace originColorSpace, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point white, double gamma)
+        public static void CreateProfile(string profileName, uint resolution, Colorimetry.ColorSpace originColorSpace, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point white, Colorimetry.Point targetWhitePoint, double gamma)
         {
             var profileGenerator = new ICCProfileGenerator();
 
             AddDesc(profileGenerator, profileName);
 
             Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
-            if (keepWhite)
+            if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
             {
                 profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(white)));  
             }
             else
             {
-                Matrix targetWhite = Colorimetry.RGBToXYZ(Colorimetry.D65);
+                Matrix targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
                 matrixWhite = Colorimetry.WhiteToWhiteAdaptation(Colorimetry.RGBToXYZ(white), targetWhite);
                 double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                 matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
@@ -75,7 +75,7 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, bool keepWhite, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, double luminance, ToneCurve curve, ToneCurve gamma = null)
+        public static void CreateProfile(string profileName, uint resolution, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, double luminance, ToneCurve curve, ToneCurve gamma = null)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -95,13 +95,13 @@ namespace msovideo_srgb
             }
 
             Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
-            if (keepWhite)
+            if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
             {
                 profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(profile.whitePoint));
             }
             else
             {
-                Matrix targetWhite = Colorimetry.RGBToXYZ(Colorimetry.D65);
+                Matrix targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
                 matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, targetWhite);
                 double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                 matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });

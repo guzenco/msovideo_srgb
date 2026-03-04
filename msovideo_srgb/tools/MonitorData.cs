@@ -55,7 +55,6 @@ namespace msovideo_srgb
                 EdidGamma = 2.2;
             }
 
-            KeepWhite = true;
             ProfilePath = "";
             CustomGamma = 2.2;
             CustomPercentage = 100;
@@ -63,6 +62,8 @@ namespace msovideo_srgb
             ProfilePathHDR = "";
             TargetPeak = 10000;
             BPCThreshold = 80;
+            CustomWhiteX = CustomWhiteHdrX = Colorimetry.D65.X;
+            CustomWhiteY = CustomWhiteHdrY = Colorimetry.D65.Y;
         }
 
         public static EDID GetEDID(string path, Display display)
@@ -79,9 +80,9 @@ namespace msovideo_srgb
             }
         }
         public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive, 
-            bool clampSdr, bool useIcc, string profilePath, bool calibrateGamma, int selectedGamma, double customGamma, double customPercentage, 
-            int target, bool keepWhite, int resolution,
-            bool useIccHDR, string profilePathHDR, bool calibrateGammaHDR, int peakTarget, double bpcThreshold):
+            bool clampSdr, bool useIcc, string profilePath, bool calibrateGamma, int selectedGamma, double customGamma, double customPercentage, int targetWhite, double customWhiteX, double customWhiteY,
+            int target, int resolution,
+            bool useIccHDR, string profilePathHDR, bool calibrateGammaHDR, int peakTarget, double bpcThreshold, int targetWhiteHDR, double customWhiteHdrX, double customWhiteHdrY):
             this(viewModel, number, display, path, hdrActive, clampSdr)
         {
             UseIcc = useIcc;
@@ -90,14 +91,19 @@ namespace msovideo_srgb
             SelectedGamma = selectedGamma;
             CustomGamma = customGamma;
             CustomPercentage = customPercentage;
+            TargetWhite = targetWhite;
+            CustomWhiteX = customWhiteX;
+            CustomWhiteY = customWhiteY;
             Target = target;
-            KeepWhite = keepWhite;
             Resolution = resolution;
             UseIccHDR = useIccHDR;
             ProfilePathHDR = profilePathHDR;
             CalibrateGammaHDR = calibrateGammaHDR;
             TargetPeak = peakTarget;
             BPCThreshold = bpcThreshold;
+            TargetWhiteHDR = targetWhiteHDR;
+            CustomWhiteHdrX = customWhiteHdrX;
+            CustomWhiteHdrY = customWhiteHdrY;
         }
 
         public int Number { get; }
@@ -130,15 +136,15 @@ namespace msovideo_srgb
             if (!doClamp) return;
 
             if (UseEdid)
-                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, EdidColorSpace, TargetColorSpace, EdidWhite, EdidGamma);
+                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, EdidColorSpace, TargetColorSpace, EdidWhite, TargetWhitePoint, EdidGamma);
             else if (UseIcc)
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePath);
 
                 double luminance = profile.luminance;
-                if (!KeepWhite)
+                if (!TargetWhitePoint.Equals(Colorimetry.NativeWhite))
                 {
-                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(Colorimetry.D65));
+                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(TargetWhitePoint));
                     double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                     Matrix newWhiteLumi = Matrix.FromValues(new[,]
                     {
@@ -183,11 +189,11 @@ namespace msovideo_srgb
                             throw new NotSupportedException("Unsupported gamma type " + SelectedGamma);
                     }
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, curve, gamma);
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, profile, TargetColorSpace, TargetWhitePoint, luminance, curve, gamma);
                 }
                 else
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, new GammaToneCurve(EdidGamma));
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, profile, TargetColorSpace, TargetWhitePoint, luminance, new GammaToneCurve(EdidGamma));
                 }
             }
             DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameSDR, false);
@@ -198,9 +204,9 @@ namespace msovideo_srgb
                 var profile = ICCMatrixProfile.FromFile(ProfilePathHDR);
 
                 double luminance = profile.luminance;
-                if (!KeepWhite)
+                if (!TargetWhitePointHDR.Equals(Colorimetry.NativeWhite))
                 {
-                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(Colorimetry.D65));
+                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(TargetWhitePointHDR));
                     double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                     Matrix newWhiteLumi = Matrix.FromValues(new[,]
                     {
@@ -225,11 +231,11 @@ namespace msovideo_srgb
 
                     luminance *= (profile.matrix * newTrcLumi)[1];
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, new SrgbEOTF(0), gamma);
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, profile, TargetColorSpace, TargetWhitePointHDR, luminance, new SrgbEOTF(0), gamma);
                 }
                 else
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, new SrgbEOTF(0));
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, profile, TargetColorSpace, TargetWhitePointHDR, luminance, new SrgbEOTF(0));
                 }
 
                 DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameHDR, true);
@@ -305,9 +311,13 @@ namespace msovideo_srgb
 
         public double CustomPercentage { set; get; }
 
-        public int Target { set; get; }
+        public int TargetWhite { set; get; }
 
-        public bool KeepWhite { set; get; }
+        public double CustomWhiteX { set; get; }
+
+        public double CustomWhiteY { set; get; }
+
+        public int Target { set; get; }
 
         public int Resolution { set; get; }
 
@@ -321,6 +331,12 @@ namespace msovideo_srgb
 
         public double BPCThreshold { set; get; }
 
+        public int TargetWhiteHDR { set; get; }
+
+        public double CustomWhiteHdrX { set; get; }
+
+        public double CustomWhiteHdrY { set; get; }
+
         public Colorimetry.ColorSpace EdidColorSpace { get; }
         public Colorimetry.Point EdidWhite { get; }
         public double EdidGamma { get; }
@@ -329,6 +345,10 @@ namespace msovideo_srgb
 
         private uint[] Resolutions = new uint[] { 256, 1024, 4096 };
         private uint CurveResolution => Resolutions[Resolution];
+
+        private Colorimetry.Point[] TargerWhites = new Colorimetry.Point[] { Colorimetry.NativeWhite, Colorimetry.D50_xy, Colorimetry.D65, Colorimetry.D93 };
+        private Colorimetry.Point TargetWhitePoint => TargetWhite < TargerWhites.Length ? TargerWhites[TargetWhite] : new Colorimetry.Point { X = CustomWhiteX, Y = CustomWhiteY };
+        private Colorimetry.Point TargetWhitePointHDR => TargetWhiteHDR < TargerWhites.Length ? TargerWhites[TargetWhiteHDR] : new Colorimetry.Point { X = CustomWhiteHdrX, Y = CustomWhiteHdrY };
 
         private void OnPropertyChanged([CallerMemberName] string name = null)
         {

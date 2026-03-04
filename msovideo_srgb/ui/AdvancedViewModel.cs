@@ -14,7 +14,6 @@ namespace msovideo_srgb
         private MonitorData _monitor;
 
         private int _target;
-        private bool _keepWhite;
         private int _resolution;
         private bool _useIcc;
         private string _profilePath;
@@ -22,11 +21,17 @@ namespace msovideo_srgb
         private int _selectedGamma;
         private double _customGamma;
         private double _customPercentage;
+        private int _targetWhite;
+        private double _customWhiteX;
+        private double _customWhiteY;
         private bool _useIccHDR;
         private string _profilePathHDR;
         private bool _calibrateGammaHDR;
         private int _targetPeak;
         private double _bpcThreshold;
+        private int _targetWhiteHDR;
+        private double _customWhiteHdrX;
+        private double _customWhiteHdrY;
 
         public AdvancedViewModel()
         {
@@ -38,7 +43,6 @@ namespace msovideo_srgb
             _monitor = monitor;
 
             _target = monitor.Target;
-            _keepWhite = monitor.KeepWhite;
             _resolution = monitor.Resolution;
             _useIcc = monitor.UseIcc;
             _profilePath = monitor.ProfilePath;
@@ -46,19 +50,23 @@ namespace msovideo_srgb
             _selectedGamma = monitor.SelectedGamma;
             _customGamma = monitor.CustomGamma;
             _customPercentage = monitor.CustomPercentage;
+            _targetWhite = monitor.TargetWhite;
+            _customWhiteX = monitor.CustomWhiteX;
+            _customWhiteY = monitor.CustomWhiteY;
             _useIccHDR = monitor.UseIccHDR;
             _profilePathHDR = monitor.ProfilePathHDR;
             _calibrateGammaHDR = monitor.CalibrateGammaHDR;
             _targetPeak = monitor.TargetPeak;
             _bpcThreshold = monitor.BPCThreshold;
+            _targetWhiteHDR = monitor.TargetWhiteHDR;
+            _customWhiteHdrX = monitor.CustomWhiteHdrX;
+            _customWhiteHdrY = monitor.CustomWhiteHdrY;
         }
 
         public void ApplyChanges()
         {
             ChangedCalibration |= _monitor.Target != _target;
             _monitor.Target = _target;
-            ChangedCalibration |= _monitor.KeepWhite != _keepWhite;
-            _monitor.KeepWhite = _keepWhite;
             ChangedCalibration |= _monitor.Resolution != _resolution;
             _monitor.Resolution = _resolution;
             ChangedCalibration |= _monitor.UseIcc != _useIcc;
@@ -73,6 +81,12 @@ namespace msovideo_srgb
             _monitor.CustomGamma = _customGamma;
             ChangedCalibration |= _monitor.CustomPercentage != _customPercentage;
             _monitor.CustomPercentage = _customPercentage;
+            ChangedCalibration |= _monitor.TargetWhite != _targetWhite;
+            _monitor.TargetWhite = TargetWhite;
+            ChangedCalibration |= _monitor.CustomWhiteX != _customWhiteX;
+            _monitor.CustomWhiteX = CustomWhiteX;
+            ChangedCalibration |= _monitor.CustomWhiteY != _customWhiteY;
+            _monitor.CustomWhiteY = CustomWhiteY;
             ChangedCalibration |= _monitor.UseIccHDR != _useIccHDR;
             _monitor.UseIccHDR = _useIccHDR;
             ChangedCalibration |= _monitor.ProfilePathHDR != _profilePathHDR;
@@ -83,6 +97,12 @@ namespace msovideo_srgb
             _monitor.TargetPeak = TargetPeak;
             ChangedCalibration |= _monitor.BPCThreshold != _bpcThreshold;
             _monitor.BPCThreshold = BPCThreshold;
+            ChangedCalibration |= _monitor.TargetWhiteHDR != _targetWhiteHDR;
+            _monitor.TargetWhiteHDR = TargetWhiteHDR;
+            ChangedCalibration |= _monitor.CustomWhiteHdrX != _customWhiteHdrX;
+            _monitor.CustomWhiteHdrX = CustomWhiteHdrX;
+            ChangedCalibration |= _monitor.CustomWhiteHdrY != _customWhiteHdrY;
+            _monitor.CustomWhiteHdrY = _customWhiteHdrY;
         }
 
         public ChromaticityCoordinates Coords => _monitor.Edid.DisplayParameters.ChromaticityCoordinates;
@@ -164,6 +184,42 @@ namespace msovideo_srgb
             get => _customGamma;
         }
 
+        public int TargetWhite
+        {
+            set
+            {
+                if (value == _targetWhite) return;
+                _targetWhite = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(UseCustomWhite));
+            }
+            get => _targetWhite;
+        }
+
+        public Visibility UseCustomWhite => TargetWhite == 4 ? Visibility.Visible : Visibility.Collapsed;
+
+        public double CustomWhiteX
+        {
+            set
+            {
+                if (value == _customWhiteX) return;
+                _customWhiteX = value;
+                OnPropertyChanged();
+            }
+            get => _customWhiteX;
+        }
+
+        public double CustomWhiteY
+        {
+            set
+            {
+                if (value == _customWhiteY) return;
+                _customWhiteY = value;
+                OnPropertyChanged();
+            }
+            get => _customWhiteY;
+        }
+
         public int Target
         {
             set
@@ -174,17 +230,6 @@ namespace msovideo_srgb
                 OnPropertyChanged(nameof(EdidWarning));
             }
             get => _target;
-        }
-
-        public bool KeepWhite
-        {
-            set
-            {
-                if (value == _keepWhite) return;
-                _keepWhite = value;
-                OnPropertyChanged();
-            }
-            get => _keepWhite;
         }
 
         public int Resolution
@@ -254,6 +299,42 @@ namespace msovideo_srgb
                 OnPropertyChanged();
             }
             get => _bpcThreshold;
+        }
+
+        public int TargetWhiteHDR
+        {
+            set
+            {
+                if (value == _targetWhiteHDR) return;
+                _targetWhiteHDR = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(UseCustomWhiteHDR));
+            }
+            get => _targetWhiteHDR;
+        }
+
+        public Visibility UseCustomWhiteHDR => TargetWhiteHDR == 4 ? Visibility.Visible : Visibility.Collapsed;
+
+        public double CustomWhiteHdrX
+        {
+            set
+            {
+                if (value == _customWhiteHdrX) return;
+                _customWhiteHdrX = value;
+                OnPropertyChanged();
+            }
+            get => _customWhiteHdrX;
+        }
+
+        public double CustomWhiteHdrY
+        {
+            set
+            {
+                if (value == _customWhiteHdrY) return;
+                _customWhiteHdrY = value;
+                OnPropertyChanged();
+            }
+            get => _customWhiteHdrY;
         }
 
         public Visibility HdrWarning => _monitor.HdrActive ? Visibility.Visible : Visibility.Collapsed;
