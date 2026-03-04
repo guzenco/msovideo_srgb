@@ -144,7 +144,7 @@ namespace msovideo_srgb
                 double luminance = profile.luminance;
                 if (!TargetWhitePoint.Equals(Colorimetry.NativeWhite))
                 {
-                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(TargetWhitePoint));
+                    var matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * Colorimetry.RGBToXYZ(TargetWhitePoint));
                     double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                     Matrix newWhiteLumi = Matrix.FromValues(new[,]
                     {
@@ -206,7 +206,7 @@ namespace msovideo_srgb
                 double luminance = profile.luminance;
                 if (!TargetWhitePointHDR.Equals(Colorimetry.NativeWhite))
                 {
-                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(TargetWhitePointHDR));
+                    var matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * Colorimetry.RGBToXYZ(TargetWhitePointHDR));
                     double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                     Matrix newWhiteLumi = Matrix.FromValues(new[,]
                     {

@@ -35,6 +35,18 @@ namespace msovideo_srgb
             }
         }
 
+        public double TrcSampleInverse(int i, double x)
+        {
+            double value = trcs[i].SampleInverseAt(x);
+
+            if (vcgt != null)
+            {
+                value = vcgt[i].SampleAt(value);
+            }
+
+            return value;
+        }
+
         private ICCMatrixProfile()
         {
         }

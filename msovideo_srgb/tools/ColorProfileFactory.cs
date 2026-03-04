@@ -38,6 +38,18 @@ namespace msovideo_srgb
 
             AddDesc(profileGenerator, profileName);
 
+            Matrix matrixCsc;
+            if (!targetColorSpace.Equals(Colorimetry.Native))
+            {
+                AddMatrix(profileGenerator, targetColorSpace);
+                matrixCsc = Colorimetry.CreateMatrix(originColorSpace, targetColorSpace);
+            }
+            else
+            {
+                AddMatrix(profileGenerator, originColorSpace);
+                matrixCsc = Matrix.FromDiagonal(new double[] { 1, 1, 1 });
+            }
+
             Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
             if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
             {
@@ -46,29 +58,25 @@ namespace msovideo_srgb
             else
             {
                 Matrix targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
-                matrixWhite = Colorimetry.WhiteToWhiteAdaptation(Colorimetry.RGBToXYZ(white), targetWhite);
+                matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(Colorimetry.RGBToXYZ(originColorSpace), Colorimetry.RGBToXYZ(white)).Inverse() * targetWhite);
                 double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                 matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
                 profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(targetWhite));
             }
 
+
+            ToneCurve gamaCurve = new GammaToneCurve(gamma);
+            AddCurve(profileGenerator, gamaCurve, resolution);
+
+            double[][] luts = new double[][] {
+                    new double[] { 0, gamaCurve.SampleInverseAt(matrixWhite[0, 0]) },
+                    new double[] { 0, gamaCurve.SampleInverseAt(matrixWhite[1, 1]) },
+                    new double[] { 0, gamaCurve.SampleInverseAt(matrixWhite[2, 2]) }
+                };
+
+            Matrix matrix = matrixCsc;
+
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(80));
-
-            AddCurve(profileGenerator, new GammaToneCurve(gamma), resolution);
-
-            Matrix matrix;
-            if (!targetColorSpace.Equals(Colorimetry.Native))
-            {
-                AddMatrix(profileGenerator, targetColorSpace);
-                matrix = Colorimetry.CreateMatrix(originColorSpace, targetColorSpace);
-            }
-            else
-            {
-                AddMatrix(profileGenerator, originColorSpace);
-                matrix = Matrix.FromDiagonal(new double[] { 1, 1, 1 });
-            }
-            
-            double[][] luts = new double[][] { new double[] { 0, matrixWhite[0, 0] }, new double[] { 0, matrixWhite[1, 1] }, new double[] { 0, matrixWhite[2, 2] } };
 
             profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(0, 80, matrix, luts));
 
@@ -80,8 +88,6 @@ namespace msovideo_srgb
             var profileGenerator = new ICCProfileGenerator();
 
             AddDesc(profileGenerator, profileName);
-
-            AddCurve(profileGenerator, curve, resolution);
 
             Matrix matrixCSC = Matrix.FromDiagonal(Matrix.One3x1());
             if (!targetColorSpace.Equals(Colorimetry.Native))
@@ -102,11 +108,13 @@ namespace msovideo_srgb
             else
             {
                 Matrix targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
-                matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, targetWhite);
+                matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * targetWhite);
                 double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                 matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
                 profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(targetWhite));
             }
+
+            AddCurve(profileGenerator, curve, resolution);
 
             double[][] luts;
 
@@ -120,12 +128,7 @@ namespace msovideo_srgb
                     {
                         double value = gamma.SampleAt(j / (resolution - 1.0));
 
-                        value = profile.trcs[i].SampleInverseAt(value * matrixWhite[i,i]);
-
-                        if (profile.vcgt != null)
-                        {
-                            value = profile.vcgt[i].SampleAt(value);
-                        }
+                        value = profile.TrcSampleInverse(i, value * matrixWhite[i, i]);
 
                         luts[i][j] = value;
                     }
@@ -133,7 +136,11 @@ namespace msovideo_srgb
             }
             else
             {
-                luts = new double[][] { new double[] { 0, matrixWhite[0, 0] }, new double[] { 0, matrixWhite[1, 1] }, new double[] { 0, matrixWhite[2, 2] } };
+                luts = new double[][] { 
+                    new double[] { 0, profile.TrcSampleInverse(0, matrixWhite[0, 0]) }, 
+                    new double[] { 0, profile.TrcSampleInverse(1, matrixWhite[1, 1]) }, 
+                    new double[] { 0, profile.TrcSampleInverse(2, matrixWhite[2, 2]) } 
+                };
             }
 
             Matrix matrix = matrixCSC;
