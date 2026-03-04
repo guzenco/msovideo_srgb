@@ -11,6 +11,7 @@ namespace msovideo_srgb
         public Matrix whitePoint = null;
         public Matrix blackPoint = null;
         public double luminance = 80;
+        public Matrix chromaticAdaptation = null;
 
         public double trcBlack
         {
@@ -323,6 +324,20 @@ namespace msovideo_srgb
 
                         result.luminance = reader.ReadS15Fixed16();
                     }
+                    else if (tagSig == "chad")
+                    {
+                        reader.ReadUInt32();
+                        reader.ReadUInt32();
+
+                        result.chromaticAdaptation = Matrix.Zero3x3();
+                        for (var j = 0; j < 3; j++)
+                        {
+                            for (var k = 0; k < 3; k++)
+                            {
+                                result.chromaticAdaptation[j, k] = reader.ReadS15Fixed16();
+                            }
+                        }
+                    }
                 }
 
                 if (!useCLUT)
@@ -333,6 +348,11 @@ namespace msovideo_srgb
                     }
 
                     result.matrix = Colorimetry.XYZScaleToD50(result.matrix);
+
+                    if (result.chromaticAdaptation != null)
+                    {
+                        result.whitePoint = result.chromaticAdaptation.Inverse() * result.whitePoint;
+                    }
                 }
             }
 
