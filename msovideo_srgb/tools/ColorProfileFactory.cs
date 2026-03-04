@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace msovideo_srgb
 {
@@ -37,13 +38,18 @@ namespace msovideo_srgb
 
             AddDesc(profileGenerator, profileName);
 
+            Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
             if (keepWhite)
             {
                 profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(white)));  
             }
             else
             {
-                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(Colorimetry.D65)));
+                Matrix targetWhite = Colorimetry.RGBToXYZ(Colorimetry.D65);
+                matrixWhite = Colorimetry.WhiteToWhiteAdaptation(Colorimetry.RGBToXYZ(white), targetWhite);
+                double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
+                matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
+                profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(targetWhite));
             }
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(80));
@@ -62,14 +68,14 @@ namespace msovideo_srgb
                 matrix = Matrix.FromDiagonal(new double[] { 1, 1, 1 });
             }
             
-            double[][] luts = new double[][] { new double[] { 0, 1 }, new double[] { 0, 1 }, new double[] { 0, 1 } };
+            double[][] luts = new double[][] { new double[] { 0, matrixWhite[0, 0] }, new double[] { 0, matrixWhite[1, 1] }, new double[] { 0, matrixWhite[2, 2] } };
 
             profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(0, 80, matrix, luts));
 
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, bool keepWhite, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, ToneCurve curve, ToneCurve gamma = null)
+        public static void CreateProfile(string profileName, uint resolution, bool keepWhite, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, double luminance, ToneCurve curve, ToneCurve gamma = null)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -97,12 +103,13 @@ namespace msovideo_srgb
             {
                 Matrix targetWhite = Colorimetry.RGBToXYZ(Colorimetry.D65);
                 matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, targetWhite);
+                double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
+                matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
                 profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(targetWhite));
             }
 
-            double luminance = profile.luminance;
-
             double[][] luts;
+
             if (gamma != null)
             {
                 luts = new double[3][];
@@ -113,7 +120,7 @@ namespace msovideo_srgb
                     {
                         double value = gamma.SampleAt(j / (resolution - 1.0));
 
-                        value = profile.trcs[i].SampleInverseAt(value);
+                        value = profile.trcs[i].SampleInverseAt(value * matrixWhite[i,i]);
 
                         if (profile.vcgt != null)
                         {
@@ -123,22 +130,13 @@ namespace msovideo_srgb
                         luts[i][j] = value;
                     }
                 }
-
-                Matrix newTrcLumi = Matrix.FromValues(new[,]
-                    {
-                        { gamma.SampleAt(1) },
-                        { gamma.SampleAt(1) },
-                        { gamma.SampleAt(1) }
-                    });
-
-                luminance *= (profile.matrix * newTrcLumi)[1];
             }
             else
             {
-                luts = new double[][] { new double[] { 0, 1 }, new double[] { 0, 1 }, new double[] { 0, 1 } };
+                luts = new double[][] { new double[] { 0, matrixWhite[0, 0] }, new double[] { 0, matrixWhite[1, 1] }, new double[] { 0, matrixWhite[2, 2] } };
             }
 
-            Matrix matrix = matrixCSC * matrixWhite;
+            Matrix matrix = matrixCSC;
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(luminance));
 

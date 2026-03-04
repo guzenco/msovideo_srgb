@@ -134,6 +134,21 @@ namespace msovideo_srgb
             else if (UseIcc)
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePath);
+
+                double luminance = profile.luminance;
+                if (!KeepWhite)
+                {
+                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(Colorimetry.D65));
+                    double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
+                    Matrix newWhiteLumi = Matrix.FromValues(new[,]
+                    {
+                        { matrixWhite[0,0] / scale },
+                        { matrixWhite[1,1] / scale },
+                        { matrixWhite[2,2] / scale }
+                    });
+                    luminance *= (profile.matrix * newWhiteLumi)[1];
+                }
+
                 if (CalibrateGamma)
                 {
                     var trcBlack = profile.trcBlack;
@@ -168,11 +183,11 @@ namespace msovideo_srgb
                             throw new NotSupportedException("Unsupported gamma type " + SelectedGamma);
                     }
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, curve, gamma);
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, curve, gamma);
                 }
                 else
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, new GammaToneCurve(EdidGamma));
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, new GammaToneCurve(EdidGamma));
                 }
             }
             DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameSDR, false);
@@ -181,15 +196,40 @@ namespace msovideo_srgb
             if(UseIccHDR)
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePathHDR);
-                
+
+                double luminance = profile.luminance;
+                if (!KeepWhite)
+                {
+                    var matrixWhite = Colorimetry.WhiteToWhiteAdaptation(profile.whitePoint, Colorimetry.RGBToXYZ(Colorimetry.D65));
+                    double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
+                    Matrix newWhiteLumi = Matrix.FromValues(new[,]
+                    {
+                        { matrixWhite[0,0] / scale },
+                        { matrixWhite[1,1] / scale },
+                        { matrixWhite[2,2] / scale }
+                    });
+                    luminance *= (profile.matrix * newWhiteLumi)[1];
+                }
+
                 if (CalibrateGammaHDR)
                 {
-                    var gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, profile.luminance, BPCThreshold);
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, KeepWhite, profile, TargetColorSpace, new SrgbEOTF(0), gamma);
+                    
+                    var gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, luminance, BPCThreshold);
+
+                    Matrix newTrcLumi = Matrix.FromValues(new[,]
+                    {
+                        { gamma.SampleAt(1) },
+                        { gamma.SampleAt(1) },
+                        { gamma.SampleAt(1) }
+                    });
+
+                    luminance *= (profile.matrix * newTrcLumi)[1];
+
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, new SrgbEOTF(0), gamma);
                 }
                 else
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, KeepWhite, profile, TargetColorSpace, new SrgbEOTF(0));
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, KeepWhite, profile, TargetColorSpace, luminance, new SrgbEOTF(0));
                 }
 
                 DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameHDR, true);
