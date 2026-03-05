@@ -119,7 +119,6 @@ namespace msovideo_srgb
 
         private void UpdateClamp(bool doClamp)
         {
-            if (!CanClamp) return;
 
             if (_clamped)
             {
@@ -246,7 +245,7 @@ namespace msovideo_srgb
         private void HandleClampException(Exception e)
         {
             MessageBox.Show(e.Message);
-            _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR);
+            _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
             ClampSdr = _clamped;
             _viewModel.SaveConfig();
             OnPropertyChanged(nameof(Clamped));

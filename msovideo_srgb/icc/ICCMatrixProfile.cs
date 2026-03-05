@@ -352,6 +352,11 @@ namespace msovideo_srgb
                     }
                 }
 
+                if (result.chromaticAdaptation != null)
+                {
+                    result.whitePoint = result.chromaticAdaptation.Inverse() * result.whitePoint;
+                }
+
                 if (!useCLUT)
                 {
                     if (seenTags != 6)
@@ -360,11 +365,6 @@ namespace msovideo_srgb
                     }
 
                     result.matrix = Colorimetry.XYZScaleToD50(result.matrix);
-
-                    if (result.chromaticAdaptation != null)
-                    {
-                        result.whitePoint = result.chromaticAdaptation.Inverse() * result.whitePoint;
-                    }
                 }
             }
 
