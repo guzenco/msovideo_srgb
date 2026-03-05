@@ -161,7 +161,7 @@ namespace msovideo_srgb
             bool iccV4 = HdrActive;
 
             if (UseEdid)
-                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, EdidColorSpace, TargetColorSpace, EdidWhite, TargetWhitePoint, reportD65, EdidGamma);
+                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, iccV4, EdidColorSpace, TargetColorSpace, EdidWhite, TargetWhitePoint, reportD65, EdidGamma);
             else if (UseIcc)
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePath);

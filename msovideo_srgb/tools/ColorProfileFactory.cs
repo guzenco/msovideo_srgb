@@ -51,7 +51,7 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, Colorimetry.ColorSpace originColorSpace, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point white, Colorimetry.Point targetWhitePoint, bool reportD65, double gamma)
+        public static void CreateProfile(string profileName, uint resolution, bool iccV4, Colorimetry.ColorSpace originColorSpace, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point white, Colorimetry.Point targetWhitePoint, bool reportD65, double gamma)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -72,6 +72,13 @@ namespace msovideo_srgb
             }
 
             Matrix reportWhite = reportD65 ? Colorimetry.RGBToXYZ(Colorimetry.D65) : targetWhite;
+
+            if (true)
+            {
+                profileGenerator.AddTag("chad", ICCProfileGenerator.MakeMatrixTag(Colorimetry.WhiteToWhiteAdaptation(reportWhite, Colorimetry.D50)));
+                reportWhite = Colorimetry.D50;
+            }
+
             profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(reportWhite));
 
             Matrix matrixCsc = Matrix.FromDiagonal(Matrix.One3x1());
