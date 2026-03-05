@@ -16,17 +16,23 @@ namespace msovideo_srgb
         }
 
         private List<TagRecord> tags = new List<TagRecord>();
+        private ushort version = 0x0220;
 
         public void AddTag(string signature, byte[] data)
         {
             if (signature == null || signature.Length != 4) throw new ArgumentException("Tag signature must be 4 chars.");
             tags.Add(new TagRecord { Signature = signature, Data = Align4(data) });
+
+            if (signature.Equals("chad"))
+            {
+                version = 0x0400;
+            }
         }
 
         public byte[] Generate()
         {
             byte[] header = new byte[128];
-            header[8] = 0x02; header[9] = 0x20;
+            header[8] = (byte) (version >> 8); header[9] = (byte)(version & 0x00FF);
             WriteAscii(header, 12, "mntr");
             WriteAscii(header, 16, "RGB ");
             WriteAscii(header, 20, "XYZ ");
@@ -213,6 +219,25 @@ namespace msovideo_srgb
             return data;
         }
 
+        public static byte[] MakeMatrixTag(Matrix matrix)
+        {
+            int headerSize = 8;
+            byte[] buf = new byte[headerSize + 36];
+
+            WriteAscii(buf, 0, "sf32");
+            WriteUInt32BE(buf, 4, 0);
+
+            for (int row = 0; row < 3; row++)
+            {
+                for (int col = 0; col < 3; col++)
+                {
+                    WriteS15Fixed16BE(buf, headerSize + (row * 3 + col) * 4, matrix[row, col]);
+                }
+            }
+
+            return buf;
+        }
+
         public static byte[] MakeMHC2(double minLuminance, double peakLuminance, Matrix matrix, double[][] curves = null)
         {
             double[,] dMatrix = null;
@@ -244,7 +269,6 @@ namespace msovideo_srgb
 
             return buf;
         }
-
 
         public static byte[] MakeMHC2(double minLuminance, double peakLuminance, double[,] matrix = null, double[][] curves = null)
         {
