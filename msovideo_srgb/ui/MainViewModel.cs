@@ -137,29 +137,51 @@ namespace msovideo_srgb
         {
             try
             {
-                var xElem = new XElement("monitors",
-                    Monitors.Select(x =>
-                        new XElement("monitor", new XAttribute("path", x.Path),
-                            new XAttribute("clamp_sdr", x.ClampSdr),
-                            new XAttribute("use_icc", x.UseIcc),
-                            new XAttribute("icc_path", x.ProfilePath),
-                            new XAttribute("calibrate_gamma", x.CalibrateGamma),
-                            new XAttribute("selected_gamma", x.SelectedGamma),
-                            new XAttribute("custom_gamma", x.CustomGamma),
-                            new XAttribute("custom_percentage", x.CustomPercentage),
-                            new XAttribute("target_white", x.TargetWhite),
-                            new XAttribute("custom_white_x", x.CustomWhiteX),
-                            new XAttribute("custom_white_y", x.CustomWhiteY),
-                            new XAttribute("target", x.Target),
-                            new XAttribute("resolution", x.Resolution),
-                            new XAttribute("use_icc_hdr", x.UseIccHDR),
-                            new XAttribute("icc_path_hdr", x.ProfilePathHDR),
-                            new XAttribute("calibrate_gamma_hdr", x.CalibrateGammaHDR),
-                            new XAttribute("target_peak", x.TargetPeak),
-                            new XAttribute("bpc_threshold", x.BPCThreshold),
-                            new XAttribute("target_white_hdr", x.TargetWhiteHDR),
-                            new XAttribute("custom_white_hdr_x", x.CustomWhiteHdrX),
-                            new XAttribute("custom_white_hdr_y", x.CustomWhiteHdrY))));
+                List<XElement> monitors = new List<XElement>();
+                if (File.Exists(_configPath))
+                {
+                    monitors = XElement.Load(_configPath).Descendants("monitor").ToList();
+                }
+
+                foreach (var m in Monitors)
+                {
+                    XElement monitor = new XElement("monitor", 
+                            new XAttribute("path", m.Path),
+                            new XAttribute("clamp_sdr", m.ClampSdr),
+                            new XAttribute("use_icc", m.UseIcc),
+                            new XAttribute("icc_path", m.ProfilePath),
+                            new XAttribute("calibrate_gamma", m.CalibrateGamma),
+                            new XAttribute("selected_gamma", m.SelectedGamma),
+                            new XAttribute("custom_gamma", m.CustomGamma),
+                            new XAttribute("custom_percentage", m.CustomPercentage),
+                            new XAttribute("target_white", m.TargetWhite),
+                            new XAttribute("custom_white_x", m.CustomWhiteX),
+                            new XAttribute("custom_white_y", m.CustomWhiteY),
+                            new XAttribute("target", m.Target),
+                            new XAttribute("resolution", m.Resolution),
+                            new XAttribute("use_icc_hdr", m.UseIccHDR),
+                            new XAttribute("icc_path_hdr", m.ProfilePathHDR),
+                            new XAttribute("calibrate_gamma_hdr", m.CalibrateGammaHDR),
+                            new XAttribute("target_peak", m.TargetPeak),
+                            new XAttribute("bpc_threshold", m.BPCThreshold),
+                            new XAttribute("target_white_hdr", m.TargetWhiteHDR),
+                            new XAttribute("custom_white_hdr_x", m.CustomWhiteHdrX),
+                            new XAttribute("custom_white_hdr_y", m.CustomWhiteHdrY));
+
+                    var existing = monitors.FirstOrDefault(x => (string)x.Attribute("path") == m.Path);
+                    if (existing != null)
+                    {
+                        int index = monitors.IndexOf(existing);
+                        monitors[index] = monitor;
+                    }
+                    else
+                    {
+                        monitors.Add(monitor);
+                    }
+                }
+
+                var xElem = new XElement("monitors", monitors);
+
                 xElem.Save(_configPath);
             }
             catch (Exception ex)
