@@ -17,6 +17,8 @@ namespace msovideo_srgb
 
         private List<TagRecord> tags = new List<TagRecord>();
         private ushort version = 0x0220;
+        private uint manufacturerID = 0;
+        private uint deviceModel = 0;
 
         public void AddTag(string signature, byte[] data)
         {
@@ -27,6 +29,16 @@ namespace msovideo_srgb
             {
                 version = 0x0400;
             }
+        }
+
+        public void SetManufacturerID(uint id)
+        {
+            manufacturerID = id;
+        }
+
+        public void setDeviceModel(uint model)
+        {
+            deviceModel = model;
         }
 
         public byte[] Generate()
@@ -40,17 +52,23 @@ namespace msovideo_srgb
             WriteUInt16BE(header, 24, 2026);    // year
             WriteUInt16BE(header, 26, 3);       // month
             WriteUInt16BE(header, 28, 1);       // day
-            WriteUInt16BE(header, 30, 1);       // hour
-            WriteUInt16BE(header, 32, 1);       // minute
-            WriteUInt16BE(header, 34, 1);       // second
+            WriteUInt16BE(header, 30, 0);       // hour
+            WriteUInt16BE(header, 32, 0);       // minute
+            WriteUInt16BE(header, 34, 0);       // second
 
             WriteAscii(header, 36, "acsp");
             WriteAscii(header, 40, "MSFT");
+
+            WriteUInt32BE(header, 48, manufacturerID);
+            WriteUInt32BE(header, 52, deviceModel);
+
             WriteUInt32BE(header, 64, 1);
 
             WriteS15Fixed16BE(header, 68, 0.9642);
             WriteS15Fixed16BE(header, 72, 1.0);
             WriteS15Fixed16BE(header, 76, 0.8249);
+
+            WriteAscii(header, 80, "msov");
 
             int tagCount = tags.Count;
             int tagTableSize = 4 + tagCount * 12;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using EDIDParser;
 
 namespace msovideo_srgb
 {
@@ -8,7 +9,7 @@ namespace msovideo_srgb
         private static void AddDesc(ICCProfileGenerator profileGenerator, string profileName)
         {
             profileGenerator.AddTag("desc", ICCProfileGenerator.MakeAsciiTag("MHC2 for " + Path.GetFileNameWithoutExtension(profileName)));
-            profileGenerator.AddTag("cprt", ICCProfileGenerator.MakeAsciiTag("No copyright, use freely"));
+            profileGenerator.AddTag("cprt", ICCProfileGenerator.MakeAsciiTag("No copyright. Created with msovideo_srgb v" + AboutWindow.Version));
         }
 
         private static void AddMatrix(ICCProfileGenerator profileGenerator, Colorimetry.ColorSpace target)
@@ -51,22 +52,48 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, Colorimetry.ColorSpace originColorSpace, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point white, Colorimetry.Point targetWhitePoint, bool reportD65, double gamma)
+        public static void CreateProfile(string profileName, uint resolution, EDID edid, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, bool reportD65)
         {
             var profileGenerator = new ICCProfileGenerator();
 
             AddDesc(profileGenerator, profileName);
 
+            Colorimetry.ColorSpace edidColorSpace;
+            Colorimetry.Point edidWhite;
+            double edidGamma;
+            if (edid != null)
+            {
+                var coords = edid.DisplayParameters.ChromaticityCoordinates;
+                edidColorSpace = new Colorimetry.ColorSpace
+                {
+                    Red = new Colorimetry.Point { X = Math.Round(coords.RedX, 3), Y = Math.Round(coords.RedY, 3) },
+                    Green = new Colorimetry.Point { X = Math.Round(coords.GreenX, 3), Y = Math.Round(coords.GreenY, 3) },
+                    Blue = new Colorimetry.Point { X = Math.Round(coords.BlueX, 3), Y = Math.Round(coords.BlueY, 3) },
+                    White = Colorimetry.D65
+                };
+                edidWhite = new Colorimetry.Point { X = Math.Round(coords.WhiteX, 3), Y = Math.Round(coords.WhiteY, 3) };
+                edidGamma = edid.DisplayParameters.DisplayGamma;
+
+                profileGenerator.SetManufacturerID(edid.ManufacturerId);
+                profileGenerator.setDeviceModel(edid.ProductCode);
+            }
+            else
+            {
+                edidColorSpace = Colorimetry.sRGB;
+                edidWhite = Colorimetry.D65;
+                edidGamma = 2.2;
+            }
+
             Matrix targetWhite;
             Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
             if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
             {
-                targetWhite = Colorimetry.RGBToXYZ(white);
+                targetWhite = Colorimetry.RGBToXYZ(edidWhite);
             }
             else
             {
                 targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
-                matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(Colorimetry.RGBToXYZ(originColorSpace), Colorimetry.RGBToXYZ(white)).Inverse() * targetWhite);
+                matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(Colorimetry.RGBToXYZ(edidColorSpace), Colorimetry.RGBToXYZ(edidWhite)).Inverse() * targetWhite);
                 double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
                 matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
             }
@@ -82,15 +109,15 @@ namespace msovideo_srgb
             Matrix matrixCsc = Matrix.FromDiagonal(Matrix.One3x1());
             if (targetColorSpace.Equals(Colorimetry.Native))
             {
-                AddMatrix(profileGenerator, originColorSpace);
+                AddMatrix(profileGenerator, edidColorSpace);
             }
             else
             {
                 AddMatrix(profileGenerator, targetColorSpace);
-                matrixCsc = Colorimetry.CreateMatrix(originColorSpace, targetColorSpace);
+                matrixCsc = Colorimetry.CreateMatrix(edidColorSpace, targetColorSpace);
             }
 
-            ToneCurve gamaCurve = new GammaToneCurve(gamma);
+            ToneCurve gamaCurve = new GammaToneCurve(edidGamma);
             AddCurve(profileGenerator, gamaCurve, resolution);
 
             double[][] luts = new double[][] {
@@ -108,11 +135,28 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, bool reportD65, double luminance, ToneCurve curve, ToneCurve gamma = null)
+        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, bool reportD65, double luminance, ToneCurve curve = null, ToneCurve gamma = null)
         {
             var profileGenerator = new ICCProfileGenerator();
 
             AddDesc(profileGenerator, profileName);
+
+            double edidGamma;
+            if (edid != null)
+            {
+                edidGamma = edid.DisplayParameters.DisplayGamma;
+                profileGenerator.SetManufacturerID(edid.ManufacturerId);
+                profileGenerator.setDeviceModel(edid.ProductCode);
+            }
+            else
+            {
+                edidGamma = 2.2;
+            }
+
+            if (curve == null)
+            {
+                curve = new GammaToneCurve(edidGamma);
+            }
 
             Matrix targetWhite;
             Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
