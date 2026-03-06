@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Windows;
 using EDIDParser;
 using EDIDParser.Descriptors;
@@ -129,6 +128,28 @@ namespace msovideo_srgb
             DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameReset, hdr);
         }
 
+        private void UnapplyProfile(string profileName, bool hdr, bool force)
+        {
+            if (DisplayColorProfileManager.GetProfile(Display, hdr).Equals(profileName))
+            {
+                if (force)
+                {
+                    ColorProfileFactory.CreateProfile(MHCProfileNameReset, CurveResolution);
+
+                    DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameReset, hdr);
+                    DisplayColorProfileManager.SetProfile(Display, MHCProfileNameReset, hdr);
+
+                    DisplayColorProfileManager.RemoveAssociation(Display, profileName, hdr);
+
+                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameReset, hdr);
+                }
+                else
+                {
+                    DisplayColorProfileManager.RemoveAssociation(Display, profileName, hdr);
+                }
+            }
+        }
+
         private void UpdateClamp(bool doClamp)
         {
             var scope = DisplayColorProfileManager.GetDisplayUserScope(Display);
@@ -139,19 +160,11 @@ namespace msovideo_srgb
 
             if (_clamped)
             {
-                if (DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR))
-                {
-                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameSDR, false);
-                }
-                if (DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR))
-                {
-                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameHDR, true);
-                }
+                UnapplyProfile(MHCProfileNameSDR, false, !doClamp);
+                UnapplyProfile(MHCProfileNameHDR, true, !doClamp);
             }
 
             if (!doClamp) return;
-
-            Thread.Sleep(100);
 
             bool reportD65 = HdrActive;
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.Win32;
@@ -122,6 +123,7 @@ namespace msovideo_srgb
 
         public void OnDisplaySettingsChanged(object sender, EventArgs e)
         {
+            Thread.Sleep(100);
             UpdateMonitors();
         }
 
