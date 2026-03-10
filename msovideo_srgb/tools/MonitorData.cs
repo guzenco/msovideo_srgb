@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
-using EDIDParser;
 using EDIDParser.Descriptors;
 using EDIDParser.Enums;
 using Microsoft.Win32;
@@ -62,13 +61,13 @@ namespace msovideo_srgb
             CustomWhiteY = CustomWhiteHdrY = Colorimetry.D65.Y;
         }
 
-        public static EDID GetEDID(string path, Display display)
+        public static ExtendedEDID GetEDID(string path, Display display)
         {
             try
             {
                 var registryPath = "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\DISPLAY\\";
                 registryPath += string.Join("\\", path.Split('#').Skip(1).Take(2));
-                return new EDID((byte[])Registry.GetValue(registryPath + "\\Device Parameters", "EDID", null));
+                return new ExtendedEDID((byte[])Registry.GetValue(registryPath + "\\Device Parameters", "EDID", null));
             }
             catch
             {
@@ -104,7 +103,7 @@ namespace msovideo_srgb
 
         public int Number { get; }
         public string Name { get; }
-        public EDID Edid { get; }
+        public ExtendedEDID Edid { get; }
         public Display Display { get; }
         public string Path { get; }
         public bool ClampSdr { get; set; }
@@ -112,6 +111,7 @@ namespace msovideo_srgb
         public string MHCProfileName { get; }
         public string MHCProfileNameSDR => "[SDR] " + MHCProfileName + ".icm";
         public string MHCProfileNameHDR => "[HDR] " + MHCProfileName + ".icm";
+        public string MHCProfileNameDefaultHDR => "[HDR] " + MHCProfileName + " default.icm";
 
         public const string MHCProfileNameReset = "msovideo_srgb_no_transform.icm";
 
@@ -126,6 +126,13 @@ namespace msovideo_srgb
             DisplayColorProfileManager.SetProfile(Display, profileName, hdr);
 
             DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameReset, hdr);
+
+            if (!UseIccHDR && DisplayColorProfileManager.GetProfile(Display, true).Equals("") && Edid != null && Edid.ExtensionCTA861 != null)
+            {
+                ColorProfileFactory.CreateProfile(MHCProfileNameDefaultHDR, CurveResolution, Edid);
+                DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameDefaultHDR, true);
+                DisplayColorProfileManager.SetProfile(Display, MHCProfileNameDefaultHDR, true);
+            }
         }
 
         private void UnapplyProfile(string profileName, bool hdr, bool force)
@@ -147,6 +154,19 @@ namespace msovideo_srgb
                 {
                     DisplayColorProfileManager.RemoveAssociation(Display, profileName, hdr);
                 }
+
+                if (Edid != null && Edid.ExtensionCTA861 != null)
+                {
+                    ColorProfileFactory.CreateProfile(MHCProfileNameDefaultHDR, CurveResolution, Edid);
+                    DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameDefaultHDR, hdr);
+                    DisplayColorProfileManager.SetProfile(Display, MHCProfileNameDefaultHDR, hdr);
+                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameDefaultHDR, hdr);
+                    if (!hdr && DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameDefaultHDR))
+                    {
+                        DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameDefaultHDR, true);
+                    }
+                }
+                
             }
         }
 
