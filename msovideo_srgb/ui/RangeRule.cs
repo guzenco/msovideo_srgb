@@ -21,6 +21,11 @@ namespace msovideo_srgb
                 return new ValidationResult(false, "Input must not end in '.'");
             }
 
+            if (valueString.Contains(".") && valueString.EndsWith("0"))
+            {
+                return new ValidationResult(false, "Input must not end in '0'");
+            }
+
             double value = 0;
             try
             {

@@ -102,7 +102,7 @@
     <Compile Include="colorimetry\LstarEOTF.cs" />
     <Compile Include="colorimetry\Lut16.cs" />
     <Compile Include="colorimetry\DoubleToneCurve.cs" />
-    <Compile Include="colorimetry\RangeRule.cs" />
+    <Compile Include="ui\RangeRule.cs" />
     <Compile Include="colorimetry\GammaToneCurve.cs" />
     <Compile Include="icc\ICCBinaryReader.cs" />
     <Compile Include="icc\ICCProfileException.cs" />
