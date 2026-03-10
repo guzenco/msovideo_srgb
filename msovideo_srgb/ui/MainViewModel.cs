@@ -121,10 +121,15 @@ namespace msovideo_srgb
             }
         }
 
+        private static int stateId = 0;
         public void OnDisplaySettingsChanged(object sender, EventArgs e)
         {
+            int curentId = ++stateId;
             Thread.Sleep(100);
-            UpdateMonitors();
+            if (stateId == curentId)
+            {
+                UpdateMonitors();
+            }
         }
 
         public void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)

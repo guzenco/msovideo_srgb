@@ -290,17 +290,7 @@ namespace msovideo_srgb
             while (factory.EnumAdapters1(adapterIndex, out IDXGIAdapter1 adapter) == 0)
             {
                 adapter.GetDesc1(out DXGI_ADAPTER_DESC1 desc);
-                uint outputIndex = 0;
-                while (adapter.EnumOutputs(outputIndex, out IDXGIOutput output) == 0)
-                {
-                    output.GetDesc(out DXGI_OUTPUT_DESC outputDesc);
-                    if (string.Equals(outputDesc.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return Tuple.Create(desc.AdapterLuid, outputIndex);
-                    }
-                    outputIndex++;
-                }
-                adapterIndex++;
+                return Tuple.Create(desc.AdapterLuid, uint.Parse(deviceName.Remove(0, 11)) - 1);
             }
 
             throw new InvalidOperationException("Display not found in DXGI enumeration.");
