@@ -33,6 +33,9 @@ namespace msovideo_srgb
                 for (int i = 1; i <= NumberOfExtensions; i++)
                 {
                     int offset = i * 128;
+                    if (offset + 128 > _rawData.Length)
+                        break;
+
                     byte[] block = new byte[128];
                     Array.Copy(_rawData, offset, block, 0, 128);
 
