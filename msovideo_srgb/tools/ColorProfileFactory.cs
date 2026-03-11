@@ -33,6 +33,16 @@ namespace msovideo_srgb
             profileGenerator.AddTag("bTRC", tagData);
         }
 
+        private static void AddCurve(ICCProfileGenerator profileGenerator, ICCMatrixProfile profile, uint resolution)
+        {
+            var tagDataR = ICCProfileGenerator.MakeCurveTag(profile.trcs[0], resolution);
+            var tagDataG = ICCProfileGenerator.MakeCurveTag(profile.trcs[1], resolution);
+            var tagDataB = ICCProfileGenerator.MakeCurveTag(profile.trcs[2], resolution);
+            profileGenerator.AddTag("rTRC", tagDataR);
+            profileGenerator.AddTag("gTRC", tagDataG);
+            profileGenerator.AddTag("bTRC", tagDataB);
+        }
+
         public static void CreateProfile(string profileName, uint resolution)
         {
             var profileGenerator = new ICCProfileGenerator();
@@ -189,21 +199,10 @@ namespace msovideo_srgb
 
             AddDesc(profileGenerator, profileName);
 
-            double edidGamma;
             if (edid != null)
             {
-                edidGamma = edid.DisplayParameters.DisplayGamma;
                 profileGenerator.SetManufacturerID(edid.ManufacturerId);
                 profileGenerator.setDeviceModel(edid.ProductCode);
-            }
-            else
-            {
-                edidGamma = 2.2;
-            }
-
-            if (curve == null)
-            {
-                curve = new GammaToneCurve(edidGamma);
             }
 
             Matrix targetWhite;
@@ -244,11 +243,18 @@ namespace msovideo_srgb
             AddMatrix(profileGenerator, reportedColorSpace);
 
             ToneCurve reportedCurve = reportGammaSRGB ? new SrgbEOTF(0) : curve;
-            AddCurve(profileGenerator, reportedCurve, resolution);
+            if (reportedCurve != null)
+            {
+                AddCurve(profileGenerator, reportedCurve, resolution);
+            }
+            else
+            {
+                AddCurve(profileGenerator, profile, resolution);
+            }
 
             double[][] luts;
 
-            if (gamma != null)
+            if (gamma != null || profile.vcgt != null)
             {
                 luts = new double[3][];
                 for (int i = 0; i < 3; i++)
@@ -256,7 +262,16 @@ namespace msovideo_srgb
                     luts[i] = new double[resolution];
                     for (int j = 1; j < resolution; j++)
                     {
-                        double value = gamma.SampleAt(j / (resolution - 1.0));
+                        double value = j / (resolution - 1.0);
+
+                        if (gamma != null)
+                        {
+                            value = gamma.SampleAt(value);
+                        }
+                        else
+                        {
+                            value = profile.trcs[i].SampleAt(value);
+                        }
 
                         value = profile.TrcSampleInverse(i, value * matrixWhite[i, i]);
 
@@ -266,10 +281,10 @@ namespace msovideo_srgb
             }
             else
             {
-                luts = new double[][] { 
-                    new double[] { 0, profile.TrcSampleInverse(0, matrixWhite[0, 0]) }, 
-                    new double[] { 0, profile.TrcSampleInverse(1, matrixWhite[1, 1]) }, 
-                    new double[] { 0, profile.TrcSampleInverse(2, matrixWhite[2, 2]) } 
+                luts = new double[][] {
+                    new double[] { 0, profile.TrcSampleInverse(0, matrixWhite[0, 0]) },
+                    new double[] { 0, profile.TrcSampleInverse(1, matrixWhite[1, 1]) },
+                    new double[] { 0, profile.TrcSampleInverse(2, matrixWhite[2, 2]) }
                 };
             }
 
