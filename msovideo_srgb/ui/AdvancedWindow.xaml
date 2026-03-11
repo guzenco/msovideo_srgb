@@ -29,6 +29,7 @@
                 <StackPanel Margin="0,0,0,6">
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding EdidWarning}" Foreground="Red">Primaries match target – cannot clamp</TextBlock>
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding HdrWarning}" Foreground="Red">HDR or ACM is active - treat target as Native</TextBlock>
+                    <TextBlock TextWrapping="Wrap" Visibility="{Binding HdrWarning}" Foreground="Red">and ignore MHC2 profile settings</TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock VerticalAlignment="Center" Text="Target" />
@@ -199,6 +200,19 @@
                                 </StackPanel>
                             </StackPanel>
                         </RadioButton>
+                        <GroupBox Header="MHC2 Profile" Margin="0,6,0,0">
+                            <StackPanel Margin="0,6,0,0">
+                                <CheckBox IsChecked="{Binding ReportWhiteD65}" HorizontalContentAlignment="Stretch">
+                                    <TextBlock Text="Report D65 white" Margin="0,0,0,6" />
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ReportColorSpaceSRGB}" HorizontalContentAlignment="Stretch">
+                                    <TextBlock Text="Report sRGB color space" Margin="0,0,0,6" />
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ReportGammaSRGB}" HorizontalContentAlignment="Stretch">
+                                    <TextBlock Text="Report sRGB gamma" Margin="0,0,0,0" />
+                                </CheckBox>
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
                 </GroupBox >
                 <GroupBox Header="HDR">

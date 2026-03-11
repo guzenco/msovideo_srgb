@@ -24,6 +24,9 @@ namespace msovideo_srgb
         private int _targetWhite;
         private double _customWhiteX;
         private double _customWhiteY;
+        private bool _reportWhiteD65;
+        private bool _reportColorSpaceSRGB;
+        private bool _reportGammaSRGB;
         private bool _useIccHDR;
         private string _profilePathHDR;
         private bool _calibrateGammaHDR;
@@ -53,6 +56,9 @@ namespace msovideo_srgb
             _targetWhite = monitor.TargetWhite;
             _customWhiteX = monitor.CustomWhiteX;
             _customWhiteY = monitor.CustomWhiteY;
+            _reportWhiteD65 = monitor.ReportWhiteD65;
+            _reportColorSpaceSRGB = monitor.ReportColorSpaceSRGB;
+            _reportGammaSRGB = monitor.ReportGammaSRGB;
             _useIccHDR = monitor.UseIccHDR;
             _profilePathHDR = monitor.ProfilePathHDR;
             _calibrateGammaHDR = monitor.CalibrateGammaHDR;
@@ -87,6 +93,12 @@ namespace msovideo_srgb
             _monitor.CustomWhiteX = CustomWhiteX;
             ChangedCalibration |= _monitor.CustomWhiteY != _customWhiteY;
             _monitor.CustomWhiteY = CustomWhiteY;
+            ChangedCalibration |= _monitor.ReportWhiteD65 != _reportWhiteD65;
+            _monitor.ReportWhiteD65 = ReportWhiteD65;
+            ChangedCalibration |= _monitor.ReportColorSpaceSRGB != _reportColorSpaceSRGB;
+            _monitor.ReportColorSpaceSRGB = ReportColorSpaceSRGB;
+            ChangedCalibration |= _monitor.ReportGammaSRGB != _reportGammaSRGB;
+            _monitor.ReportGammaSRGB = ReportGammaSRGB;
             ChangedCalibration |= _monitor.UseIccHDR != _useIccHDR;
             _monitor.UseIccHDR = _useIccHDR;
             ChangedCalibration |= _monitor.ProfilePathHDR != _profilePathHDR;
@@ -218,6 +230,39 @@ namespace msovideo_srgb
                 OnPropertyChanged();
             }
             get => _customWhiteY;
+        }
+
+        public bool ReportWhiteD65
+        {
+            set
+            {
+                if (value == _reportWhiteD65) return;
+                _reportWhiteD65 = value;
+                OnPropertyChanged();
+            }
+            get => _reportWhiteD65;
+        }
+
+        public bool ReportColorSpaceSRGB
+        {
+            set
+            {
+                if (value == _reportColorSpaceSRGB) return;
+                _reportColorSpaceSRGB = value;
+                OnPropertyChanged();
+            }
+            get => _reportColorSpaceSRGB;
+        }
+
+        public bool ReportGammaSRGB
+        {
+            set
+            {
+                if (value == _reportGammaSRGB) return;
+                _reportGammaSRGB = value;
+                OnPropertyChanged();
+            }
+            get => _reportGammaSRGB;
         }
 
         public int Target
