@@ -36,96 +36,26 @@ namespace msovideo_srgb
             CPST_EXTENDED_DISPLAY_COLOR_MODE = 8
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct LUID
-        {
-            public uint LowPart;
-            public int HighPart;
-        }
+        private const uint QDC_ONLY_ACTIVE_PATHS = 0x00000002;
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        internal struct DXGI_ADAPTER_DESC1
-        {
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-            public string Description;
-            public uint VendorId;
-            public uint DeviceId;
-            public uint SubSysId;
-            public uint Revision;
-            public IntPtr DedicatedVideoMemory;
-            public IntPtr DedicatedSystemMemory;
-            public IntPtr SharedSystemMemory;
-            public LUID AdapterLuid;
-            public uint Flags;
-        }
+        [DllImport("user32.dll")]
+        private static extern int GetDisplayConfigBufferSizes(
+            uint flags,
+            out uint numPathArrayElements,
+            out uint numModeInfoArrayElements);
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        internal struct DXGI_OUTPUT_DESC
-        {
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public string DeviceName;
-            public RECT DesktopCoordinates;
-            [MarshalAs(UnmanagedType.Bool)]
-            public bool AttachedToDesktop;
-            public int Rotation;
-            public IntPtr Monitor;
-        }
+        [DllImport("user32.dll")]
+        private static extern int QueryDisplayConfig(
+            uint flags,
+            ref uint numPathArrayElements,
+            [Out] DISPLAYCONFIG_PATH_INFO[] pathArray,
+            ref uint numModeInfoArrayElements,
+            [Out] DISPLAYCONFIG_MODE_INFO[] modeInfoArray,
+            IntPtr currentTopologyId);
 
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
-
-        [ComImport, Guid("770aae78-f26f-4dba-a829-253c83d1b387")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IDXGIFactory1
-        {
-            void SetPrivateData();
-            void SetPrivateDataInterface();
-            void GetPrivateData();
-            void GetParent();
-
-            [PreserveSig]
-            int EnumAdapters1(uint adapterIndex, out IDXGIAdapter1 adapter);
-        }
-
-        [ComImport, Guid("29038f61-3839-4626-91fd-086879011a05")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IDXGIAdapter1
-        {
-            void SetPrivateData();
-            void SetPrivateDataInterface();
-            void GetPrivateData();
-            void GetParent();
-
-            [PreserveSig]
-            int EnumOutputs(uint outputIndex, out IDXGIOutput output);
-
-            [PreserveSig]
-            int GetDesc1(out DXGI_ADAPTER_DESC1 desc);
-        }
-
-        [ComImport, Guid("ae02eedb-c735-4690-8d52-5a8dc20213aa")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IDXGIOutput
-        {
-            void SetPrivateData();
-            void SetPrivateDataInterface();
-            void GetPrivateData();
-            void GetParent();
-
-            [PreserveSig]
-            int GetDesc(out DXGI_OUTPUT_DESC desc);
-        }
-
-        [DllImport("dxgi.dll", ExactSpelling = true)]
-        private static extern int CreateDXGIFactory1(
-            [In] ref Guid riid,
-            [Out, MarshalAs(UnmanagedType.Interface)] out IDXGIFactory1 factory);
+        [DllImport("user32.dll")]
+        private static extern int DisplayConfigGetDeviceInfo(
+            ref DISPLAYCONFIG_TARGET_DEVICE_NAME deviceName);
 
         [DllImport("mscms.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern int ColorProfileAddDisplayAssociation(
@@ -178,7 +108,7 @@ namespace msovideo_srgb
 
         public static void AddAssociation(Display display, string profileName, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DisplayName);
+            var luidAndSource = FindAdapterAndSource(display.DevicePath);
             int hr = ColorProfileAddDisplayAssociation(
                 WcsProfileManagementScope.CurrentUser,
                 profileName,
@@ -192,7 +122,7 @@ namespace msovideo_srgb
 
         public static void RemoveAssociation(Display display, string profileName, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DisplayName);
+            var luidAndSource = FindAdapterAndSource(display.DevicePath);
             int hr = ColorProfileRemoveDisplayAssociation(
                 WcsProfileManagementScope.CurrentUser,
                 profileName,
@@ -204,7 +134,7 @@ namespace msovideo_srgb
         }
         public static string GetProfile(Display display, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DisplayName);
+            var luidAndSource = FindAdapterAndSource(display.DevicePath);
 
             IntPtr profileNamePtr;
             int hr = ColorProfileGetDisplayDefault(
@@ -237,7 +167,7 @@ namespace msovideo_srgb
 
         public static void SetProfile(Display display, string profilePath, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DisplayName);
+            var luidAndSource = FindAdapterAndSource(display.DevicePath);
 
             int hr = ColorProfileSetDisplayDefaultAssociation(
                 WcsProfileManagementScope.CurrentUser,
@@ -255,8 +185,8 @@ namespace msovideo_srgb
 
         public static WcsProfileManagementScope GetDisplayUserScope(Display display)
         {
-            var luidAndSource = FindAdapterAndSource(display.DisplayName);
-            
+            var luidAndSource = FindAdapterAndSource(display.DevicePath);
+
             WcsProfileManagementScope scope;
             int hr = ColorProfileGetDisplayUserScope(
                 luidAndSource.Item1,
@@ -272,7 +202,7 @@ namespace msovideo_srgb
         }
 
         public static void SetDisplayUserScope(Display display, WcsProfileManagementScope usePerUserProfiles)
-        { 
+        {
             WcsSetUsePerUserProfiles(
                 display.DeviceKey,
                 CLASS_MONITOR,
@@ -280,20 +210,41 @@ namespace msovideo_srgb
             );
         }
 
-        private static Tuple<LUID, uint> FindAdapterAndSource(string deviceName)
+        private static Tuple<LUID, uint> FindAdapterAndSource(string devicePath)
         {
-            Guid factoryGuid = typeof(IDXGIFactory1).GUID;
-            int result = CreateDXGIFactory1(ref factoryGuid, out IDXGIFactory1 factory);
-            if (result != 0) Marshal.ThrowExceptionForHR(result);
+            GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, out uint numPaths, out uint numModes);
 
-            uint adapterIndex = 0;
-            while (factory.EnumAdapters1(adapterIndex, out IDXGIAdapter1 adapter) == 0)
+            var paths = new DISPLAYCONFIG_PATH_INFO[numPaths];
+            var modes = new DISPLAYCONFIG_MODE_INFO[numModes];
+
+            QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, ref numPaths, paths, ref numModes, modes, IntPtr.Zero);
+
+            foreach (var path in paths)
             {
-                adapter.GetDesc1(out DXGI_ADAPTER_DESC1 desc);
-                return Tuple.Create(desc.AdapterLuid, uint.Parse(deviceName.Remove(0, 11)) - 1);
+                var source = path.sourceInfo;
+                var target = path.targetInfo;
+
+                var targetName = new DISPLAYCONFIG_TARGET_DEVICE_NAME
+                {
+                    header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
+                    {
+                        type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME,
+                        size = Marshal.SizeOf(typeof(DISPLAYCONFIG_TARGET_DEVICE_NAME)),
+                        adapterId = target.adapterId,
+                        id = target.id
+                    }
+                };
+               
+                if (DisplayConfigGetDeviceInfo(ref targetName) == 0)
+                {
+                    if (string.Equals(targetName.monitorDevicePath, devicePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Tuple.Create(source.adapterId, source.id);
+                    }
+                }
             }
 
-            throw new InvalidOperationException("Display not found in DXGI enumeration.");
+            throw new InvalidOperationException("Display not found in DisplayConfig enumeration.");
         }
     }
 
