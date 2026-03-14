@@ -195,6 +195,18 @@ namespace msovideo_srgb
             return data;
         }
 
+        public static byte[] MakeCurveTag(Func<double, double> sampleAt, uint resolution)
+        {
+            double[] curve = new double[resolution];
+
+            for (int i = 0; i < resolution; i++)
+            {
+                curve[i] = sampleAt(i / (resolution - 1.0));
+            }
+
+            return MakeCurveTag(curve);
+        }
+
         public static byte[] MakeCurveTag(ToneCurve toneCurve, uint resolution)
         {
             double[] curve = new double[resolution];

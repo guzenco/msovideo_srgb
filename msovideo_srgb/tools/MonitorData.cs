@@ -76,7 +76,7 @@ namespace msovideo_srgb
             }
         }
         public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive, 
-            bool clampSdr, bool useIcc, string profilePath, bool calibrateGamma, int selectedGamma, double customGamma, double customPercentage, int targetWhite, double customWhiteX, double customWhiteY,
+            bool clampSdr, bool useIcc, string profilePath, bool calibrateGamma, int selectedGamma, double customGamma, double customPercentage, bool useVcgt, int targetWhite, double customWhiteX, double customWhiteY,
             bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB,
             int target, int resolution,
             bool useIccHDR, string profilePathHDR, bool calibrateGammaHDR, int peakTarget, double bpcThreshold, int targetWhiteHDR, double customWhiteHdrX, double customWhiteHdrY):
@@ -88,6 +88,7 @@ namespace msovideo_srgb
             SelectedGamma = selectedGamma;
             CustomGamma = customGamma;
             CustomPercentage = customPercentage;
+            UseVcgt = useVcgt;
             TargetWhite = targetWhite;
             CustomWhiteX = customWhiteX;
             CustomWhiteY = customWhiteY;
@@ -245,11 +246,11 @@ namespace msovideo_srgb
                             throw new NotSupportedException("Unsupported gamma type " + SelectedGamma);
                     }
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, ReportWhiteD65 || HdrActive, ReportColorSpaceSRGB && !HdrActive, ReportGammaSRGB && !HdrActive, luminance, curve, gamma);
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance, ReportWhiteD65 || HdrActive, ReportColorSpaceSRGB && !HdrActive, ReportGammaSRGB && !HdrActive, UseVcgt, curve, gamma);
                 }
                 else
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, ReportWhiteD65 || HdrActive, ReportColorSpaceSRGB && !HdrActive, ReportGammaSRGB && !HdrActive, luminance);
+                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance, ReportWhiteD65 || HdrActive, ReportColorSpaceSRGB && !HdrActive, ReportGammaSRGB && !HdrActive, UseVcgt);
                 }
             }
 
@@ -287,11 +288,11 @@ namespace msovideo_srgb
 
                     luminance *= (profile.matrix * newTrcLumi)[1];
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, false, false, false, luminance, new SrgbEOTF(0), gamma);
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, luminance, false, false, false, false, new SrgbEOTF(0), gamma);
                 }
                 else
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, false, false, false, luminance, new SrgbEOTF(0));
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, luminance, false, false, false, false, new SrgbEOTF(0));
                 }
 
                 ApplyProfile(MHCProfileNameHDR, true);
@@ -365,6 +366,8 @@ namespace msovideo_srgb
         public double CustomGamma { set; get; }
 
         public double CustomPercentage { set; get; }
+
+        public bool UseVcgt { set; get; }
 
         public int TargetWhite { set; get; }
 

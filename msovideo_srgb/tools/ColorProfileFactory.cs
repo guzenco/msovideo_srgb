@@ -33,11 +33,11 @@ namespace msovideo_srgb
             profileGenerator.AddTag("bTRC", tagData);
         }
 
-        private static void AddCurve(ICCProfileGenerator profileGenerator, ICCMatrixProfile profile, uint resolution)
+        private static void AddCurve(ICCProfileGenerator profileGenerator, ICCMatrixProfile profile, Matrix matrixWhite, bool useVsgt, uint resolution)
         {
-            var tagDataR = ICCProfileGenerator.MakeCurveTag(profile.trcs[0], resolution);
-            var tagDataG = ICCProfileGenerator.MakeCurveTag(profile.trcs[1], resolution);
-            var tagDataB = ICCProfileGenerator.MakeCurveTag(profile.trcs[2], resolution);
+            byte[] tagDataR = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(0 ,x, useVsgt, matrixWhite), resolution);
+            byte[] tagDataG = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(1, x, useVsgt, matrixWhite), resolution);
+            byte[] tagDataB = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(2, x, useVsgt, matrixWhite), resolution);
             profileGenerator.AddTag("rTRC", tagDataR);
             profileGenerator.AddTag("gTRC", tagDataG);
             profileGenerator.AddTag("bTRC", tagDataB);
@@ -193,7 +193,7 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB, double luminance, ToneCurve curve = null, ToneCurve gamma = null)
+        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, double luminance, bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB, bool useVcgt, ToneCurve curve = null, ToneCurve gamma = null)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -209,7 +209,19 @@ namespace msovideo_srgb
             Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
             if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
             {
-                targetWhite = profile.whitePoint;
+                if (gamma == null && !useVcgt && profile.vcgt != null)
+                {
+                    Matrix profileMatrixWhite = Matrix.FromDiagonal(new double[] {
+                        profile.TrcSample(0, Math.Pow(profile.vcgt[0].SampleAt(1), 2)),
+                        profile.TrcSample(1, Math.Pow(profile.vcgt[1].SampleAt(1), 2)),
+                        profile.TrcSample(2, Math.Pow(profile.vcgt[2].SampleAt(1), 2))
+                    });
+                    targetWhite = Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint) * profileMatrixWhite.Inverse() * Matrix.One3x1();
+                }
+                else
+                {
+                    targetWhite = profile.whitePoint;
+                }
             }
             else
             {
@@ -249,12 +261,12 @@ namespace msovideo_srgb
             }
             else
             {
-                AddCurve(profileGenerator, profile, resolution);
+                AddCurve(profileGenerator, profile, matrixWhite, !useVcgt, resolution);
             }
 
             double[][] luts;
 
-            if (gamma != null || profile.vcgt != null)
+            if (gamma != null || (useVcgt && profile.vcgt != null))
             {
                 luts = new double[3][];
                 for (int i = 0; i < 3; i++)
@@ -270,7 +282,7 @@ namespace msovideo_srgb
                         }
                         else
                         {
-                            value = profile.trcs[i].SampleAt(value);
+                            value = profile.TrcSample(i, value, !useVcgt, matrixWhite);
                         }
 
                         value = profile.TrcSampleInverse(i, value * matrixWhite[i, i]);
@@ -282,9 +294,9 @@ namespace msovideo_srgb
             else
             {
                 luts = new double[][] {
-                    new double[] { 0, profile.TrcSampleInverse(0, matrixWhite[0, 0]) },
-                    new double[] { 0, profile.TrcSampleInverse(1, matrixWhite[1, 1]) },
-                    new double[] { 0, profile.TrcSampleInverse(2, matrixWhite[2, 2]) }
+                    new double[] { 0, targetWhitePoint.Equals(Colorimetry.NativeWhite) ? 1 : profile.TrcSampleInverse(0, matrixWhite[0, 0]) },
+                    new double[] { 0, targetWhitePoint.Equals(Colorimetry.NativeWhite) ? 1 : profile.TrcSampleInverse(1, matrixWhite[1, 1]) },
+                    new double[] { 0, targetWhitePoint.Equals(Colorimetry.NativeWhite) ? 1 : profile.TrcSampleInverse(2, matrixWhite[2, 2]) }
                 };
             }
 

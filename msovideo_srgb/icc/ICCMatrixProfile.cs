@@ -35,16 +35,42 @@ namespace msovideo_srgb
             }
         }
 
-        public double TrcSampleInverse(int i, double x)
+        public double TrcSampleInverse(int i, double x, bool useVcgt = true)
         {
             double value = trcs[i].SampleInverseAt(x);
 
-            if (vcgt != null)
+            if (useVcgt && vcgt != null)
             {
                 value = vcgt[i].SampleAt(value);
             }
 
             return value;
+        }
+
+        public double TrcSample(int i, double x, bool useVcgt = true)
+        {
+            double value = x;
+
+            if (useVcgt && vcgt != null)
+            {
+                value = vcgt[i].SampleInverseAt(value);
+            }
+
+            value = trcs[i].SampleAt(value);
+
+            return value;
+        }
+
+        public double TrcSample(int i, double x, bool useVsgt, Matrix matrixWhite)
+        {
+            double black = TrcSample(i, 0, useVsgt);
+
+            double white_x = TrcSampleInverse(i, matrixWhite[i, i]);
+            double white = TrcSample(i, white_x, useVsgt);
+            
+            double sample = TrcSample(i, x * white_x, useVsgt);
+
+            return black + (sample - black) / (white - black) / (1 + black);
         }
 
         private ICCMatrixProfile()

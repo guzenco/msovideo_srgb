@@ -21,6 +21,7 @@ namespace msovideo_srgb
         private int _selectedGamma;
         private double _customGamma;
         private double _customPercentage;
+        private bool _useVcgt;
         private int _targetWhite;
         private double _customWhiteX;
         private double _customWhiteY;
@@ -53,6 +54,7 @@ namespace msovideo_srgb
             _selectedGamma = monitor.SelectedGamma;
             _customGamma = monitor.CustomGamma;
             _customPercentage = monitor.CustomPercentage;
+            _useVcgt = monitor.UseVcgt;
             _targetWhite = monitor.TargetWhite;
             _customWhiteX = monitor.CustomWhiteX;
             _customWhiteY = monitor.CustomWhiteY;
@@ -87,6 +89,8 @@ namespace msovideo_srgb
             _monitor.CustomGamma = _customGamma;
             ChangedCalibration |= _monitor.CustomPercentage != _customPercentage;
             _monitor.CustomPercentage = _customPercentage;
+            ChangedCalibration |= _monitor.UseVcgt != _useVcgt;
+            _monitor.UseVcgt = _useVcgt;
             ChangedCalibration |= _monitor.TargetWhite != _targetWhite;
             _monitor.TargetWhite = TargetWhite;
             ChangedCalibration |= _monitor.CustomWhiteX != _customWhiteX;
@@ -166,6 +170,7 @@ namespace msovideo_srgb
                 if (value == _calibrateGamma) return;
                 _calibrateGamma = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(UseVcgtVisibility));
             }
             get => _calibrateGamma;
         }
@@ -195,6 +200,19 @@ namespace msovideo_srgb
             }
             get => _customGamma;
         }
+
+        public bool UseVcgt
+        {
+            set
+            {
+                if (value == _useVcgt) return;
+                _useVcgt = value;
+                OnPropertyChanged();
+            }
+            get => _useVcgt;
+        }
+
+        public Visibility UseVcgtVisibility => CalibrateGamma ? Visibility.Collapsed : Visibility.Visible;
 
         public int TargetWhite
         {
