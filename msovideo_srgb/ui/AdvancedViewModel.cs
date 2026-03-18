@@ -22,6 +22,7 @@ namespace msovideo_srgb
         private double _customGamma;
         private double _customPercentage;
         private bool _useVcgt;
+        private bool _optimizeMatrix;
         private int _targetWhite;
         private double _customWhiteX;
         private double _customWhiteY;
@@ -55,6 +56,7 @@ namespace msovideo_srgb
             _customGamma = monitor.CustomGamma;
             _customPercentage = monitor.CustomPercentage;
             _useVcgt = monitor.UseVcgt;
+            _optimizeMatrix = monitor.OptimizeMatrix;
             _targetWhite = monitor.TargetWhite;
             _customWhiteX = monitor.CustomWhiteX;
             _customWhiteY = monitor.CustomWhiteY;
@@ -91,6 +93,8 @@ namespace msovideo_srgb
             _monitor.CustomPercentage = _customPercentage;
             ChangedCalibration |= _monitor.UseVcgt != _useVcgt;
             _monitor.UseVcgt = _useVcgt;
+            ChangedCalibration |= _monitor.OptimizeMatrix != _optimizeMatrix;
+            _monitor.OptimizeMatrix = _optimizeMatrix;
             ChangedCalibration |= _monitor.TargetWhite != _targetWhite;
             _monitor.TargetWhite = TargetWhite;
             ChangedCalibration |= _monitor.CustomWhiteX != _customWhiteX;
@@ -213,6 +217,17 @@ namespace msovideo_srgb
         }
 
         public Visibility UseVcgtVisibility => CalibrateGamma ? Visibility.Collapsed : Visibility.Visible;
+
+        public bool OptimizeMatrix
+        {
+            set
+            {
+                if (value == _optimizeMatrix) return;
+                _optimizeMatrix = value;
+                OnPropertyChanged();
+            }
+            get => _optimizeMatrix;
+        }
 
         public int TargetWhite
         {

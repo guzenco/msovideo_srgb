@@ -231,5 +231,48 @@ namespace msovideo_srgb
 
             return result;
         }
+
+        public Matrix Map(Func<int, int, double, double> func)
+        {
+            var result = Cols == 1 ? Zero3x1() : Zero3x3();
+            for (var i = 0; i < result.Rows; i++)
+            {
+                for (var j = 0; j < result.Cols; j++)
+                {
+                    result[i, j] = func(i, j, this[i, j]);
+                }
+            }
+            return result;
+        }
+
+        public double Max()
+        {
+            double max = double.MinValue;
+            for (var i = 0; i < Rows; i++)
+            {
+                for (var j = 0; j < Cols; j++)
+                {
+                    max = Math.Max(max, this[i, j]);
+                }
+            }
+            return max;
+        }
+
+        public double DifferenceMax(Matrix m)
+        {
+            if (Cols != m.Cols || Rows != m.Rows)
+            {
+                throw new ArgumentException("Both must have same size");
+            }
+            double maxDiff = double.MinValue;
+            for (int i = 0; i < Rows; i++)
+            {
+                for (int j = 0; j < Cols; j++)
+                {
+                    maxDiff = Math.Max(maxDiff, Math.Abs(this[i, j] - m[i, j]));
+                }
+            }
+            return maxDiff;
+        }
     }
 }

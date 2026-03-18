@@ -35,12 +35,70 @@ namespace msovideo_srgb
 
         private static void AddCurve(ICCProfileGenerator profileGenerator, ICCMatrixProfile profile, Matrix matrixWhite, bool useVsgt, uint resolution)
         {
-            byte[] tagDataR = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(0 ,x, useVsgt, matrixWhite), resolution);
+            byte[] tagDataR = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(0, x, useVsgt, matrixWhite), resolution);
             byte[] tagDataG = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(1, x, useVsgt, matrixWhite), resolution);
             byte[] tagDataB = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(2, x, useVsgt, matrixWhite), resolution);
             profileGenerator.AddTag("rTRC", tagDataR);
             profileGenerator.AddTag("gTRC", tagDataG);
             profileGenerator.AddTag("bTRC", tagDataB);
+        }
+
+        private static Matrix OptimizeMatrix(Matrix matrixCSC, Func<int, int, double, double> sampleAt)
+        {
+            ToneCurve srgbCurve = new SrgbEOTF(0);
+
+            Matrix white = Colorimetry.RGBToXYZ(Colorimetry.D65);
+            Matrix white3x3 = Matrix.FromDiagonal(white);
+
+            Matrix target = matrixCSC.Map(x => x > 0 ? x : 0); ;
+
+            Matrix identityMatrix = Matrix.FromDiagonal(Matrix.One3x1());
+            Matrix finalMatrixOptimization = identityMatrix;
+            int n = 1023;
+
+            for (int i = 0; i < 100; i++)
+            {
+                Matrix optimizedMatrixCSC = matrixCSC * finalMatrixOptimization;
+
+                Matrix finalMatrixSum = Matrix.Zero3x3();
+                Matrix targetSum = Matrix.Zero3x3();
+
+                double max = optimizedMatrixCSC.Max();
+
+                for (int j = 0; j < n; j++)
+                {
+                    double scale = srgbCurve.SampleAt((j + 1.0) / n) / max;
+
+                    Matrix finalMatrix = optimizedMatrixCSC.Map(x => x > 0 ? x : 0);
+
+                    finalMatrix *= scale;
+                    finalMatrix = finalMatrix.Map((r, c, x) => sampleAt(r, c, srgbCurve.SampleInverseAt(x)));
+                    finalMatrix /= scale;
+
+                    finalMatrixSum += finalMatrix;
+                    targetSum += target;
+
+                }
+
+                finalMatrixSum = Matrix.FromDiagonal(finalMatrixSum * white).Inverse() * white3x3 * finalMatrixSum;
+                targetSum = Matrix.FromDiagonal(targetSum * white).Inverse() * white3x3 * targetSum;
+
+                Matrix matrixOptimization = finalMatrixSum.Inverse() * targetSum;
+
+                if (identityMatrix.DifferenceMax(matrixOptimization) < 1E-10)
+                {
+                    break;
+                }
+
+                finalMatrixOptimization = finalMatrixOptimization * matrixOptimization;
+
+            }
+
+            double k = 1.0 - Math.Max(identityMatrix.DifferenceMax(matrixCSC) * 2, 0);
+
+            finalMatrixOptimization = (1 - k) * identityMatrix + k * finalMatrixOptimization;
+
+            return finalMatrixOptimization;
         }
 
         public static void CreateProfile(string profileName, uint resolution)
@@ -193,7 +251,7 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, double luminance, bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB, bool useVcgt, ToneCurve curve = null, ToneCurve gamma = null)
+        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, double luminance, bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB, bool useVcgt, bool optimizeMatrix, bool acmMode, ToneCurve curve = null, ToneCurve gamma = null)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -249,6 +307,23 @@ namespace msovideo_srgb
             {
                 finalColorSpace = Colorimetry.RGBToPCSXYZ(targetColorSpace);
                 matrixCSC = Colorimetry.CreateMatrix(profile.matrix, targetColorSpace);
+            }
+
+            if (optimizeMatrix)
+            {
+                Matrix matrixOptimization;
+                Matrix matrixToOpt = acmMode ? Colorimetry.CreateMatrix(profile.matrix, Colorimetry.sRGB) : matrixCSC;
+
+                if (curve != null)
+                {
+                    matrixOptimization = OptimizeMatrix(matrixToOpt, (r, c, x) => curve.SampleAt(x));
+                }
+                else
+                {
+                    matrixOptimization = OptimizeMatrix(matrixToOpt, (r, c, x) => (profile.TrcSample(r, x, !useVcgt, matrixWhite) - profile.TrcSample(r, 0, !useVcgt)) / (1 - profile.TrcSample(r, 0, !useVcgt)));
+                }
+
+                matrixCSC = matrixCSC * matrixOptimization;
             }
 
             Matrix reportedColorSpace = reportColorSpaceSRGB ? Colorimetry.RGBToPCSXYZ(Colorimetry.sRGB) : finalColorSpace;

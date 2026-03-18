@@ -198,7 +198,8 @@
                                     </TextBox>
                                     <TextBlock VerticalAlignment="Center" Margin="2,0,0,0">% black output offset</TextBlock>
                                 </StackPanel>
-                                <CheckBox IsChecked="{Binding UseVcgt}" Visibility="{Binding UseVcgtVisibility, Mode=OneWay}" VerticalAlignment="Center" Margin="0,6,0,0">Apply gamma calibration from VCGT</CheckBox>
+                                <CheckBox IsChecked="{Binding UseVcgt}" Visibility="{Binding UseVcgtVisibility, Mode=OneWay}" VerticalAlignment="Center" Margin="0,3,0,3">Apply gamma calibration from VCGT</CheckBox>
+                                <CheckBox IsChecked="{Binding OptimizeMatrix}" VerticalAlignment="Center" Margin="0,3,0,0">Optimize CSC matrix for gamma</CheckBox>
                             </StackPanel>
                         </RadioButton>
                         <GroupBox Header="MHC2 Profile" Margin="0,6,0,0">
