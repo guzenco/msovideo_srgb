@@ -15,7 +15,7 @@ The tool generates and applies an ICC profile that contains idealized display ch
 
 The tool relies on MHC2, and therefore its requirements align with those of the [Windows hardware display color calibration pipeline](https://learn.microsoft.com/en-us/windows/win32/wcs/display-calibration-mhc#system-requirements).
 
-Windows 10, version 2004:
+Windows 10, version 2004 (20H1) or later:
 * AMD:
   * AMD RX 500 400 Series, or later
   * AMD Ryzen processors with Radeon Graphics
@@ -40,7 +40,8 @@ Generally, the clamp should persist through reboots and updates, but it can brea
 * For the gamma options to work properly, the profile must report the display's black point accurately. DisplayCAL's default settings, e.g. with the sRGB preset, work fine.
 * To achieve optimal results, consider creating a custom testchart in DisplayCAL with a high number of neutral (grayscale) patches, such as 256. With that, a grayscale calibration (setting "Tone curve" to anything other than "As measured") should be unnecessary unless your display lacks RGB gain controls, but can lead to better accuracy on some poorly behaved displays. The number of colored patches should not matter much. Additionally, configuring DisplayCAL to generate a "Curves + matrix" profile with "Black point compensation" disabled should also result in a lower average error than using an XYZ LUT profile. This advice is based on what worked well for a handful of users, so if you have anything else to add, please let me know.
 * Only the VCGT (if present), TRC and PCS matrix parts of an ICC profile are used. If present, the A2B1 data is used to calculate (hopefully) higher quality TRC and PCS matrix values.
-* The sRGB gamma option provides the best ΔE.
+* On NVIDIA GPUs, gamma calibration doesn’t work when reference mode is active. This can be disabled in the NVIDIA Control Panel by going to Display → Adjust desktop color settings and unchecking "Override to reference mode".
+* The sRGB gamma option provides the best ΔE. Using different gamma settings, especially Absolute/Relative with a 100% black output offset, will result in oversaturation and darkening of colors depending on the display’s native color space and its final gamma difference from sRGB. This come from limitations of MHC2, and it can be mitigated by enabling "Optimize CSC matrix for gamma".
 
 # Notes for HDR calibration
 
@@ -71,4 +72,4 @@ In HDR mode, the target color space is treated as Native.
 # Known issues
 
 * The color space transform does not get applied properly to the mouse cursor, which results in it having wrong gamma and colors. This should be hardly noticeable with the default Windows cursor. Workaround: Force software rendering of the cursor, e.g. using [SoftCursor](https://www.monitortests.com/forum/Thread-SoftCursor).
- 
+* R590 NVIDIA drivers with Windows 10 may cause unexpected color distortions.
