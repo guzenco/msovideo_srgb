@@ -50,7 +50,7 @@ namespace msovideo_srgb
             Matrix white = Colorimetry.RGBToXYZ(Colorimetry.D65);
             Matrix white3x3 = Matrix.FromDiagonal(white);
 
-            Matrix target = matrixCSC.Map(x => x > 0 ? x : 0); ;
+            Matrix target = matrixCSC.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
 
             Matrix identityMatrix = Matrix.FromDiagonal(Matrix.One3x1());
             Matrix finalMatrixOptimization = identityMatrix;
@@ -63,13 +63,11 @@ namespace msovideo_srgb
                 Matrix finalMatrixSum = Matrix.Zero3x3();
                 Matrix targetSum = Matrix.Zero3x3();
 
-                double max = optimizedMatrixCSC.Max();
-
                 for (int j = 0; j < n; j++)
                 {
-                    double scale = srgbCurve.SampleAt((j + 1.0) / n) / max;
+                    double scale = srgbCurve.SampleAt((j + 1.0) / n);
 
-                    Matrix finalMatrix = optimizedMatrixCSC.Map(x => x > 0 ? x : 0);
+                    Matrix finalMatrix = optimizedMatrixCSC.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
 
                     finalMatrix *= scale;
                     finalMatrix = finalMatrix.Map((r, c, x) => sampleAt(r, c, srgbCurve.SampleInverseAt(x)));
@@ -94,7 +92,7 @@ namespace msovideo_srgb
 
             }
 
-            double k = 1.0 - Math.Max(identityMatrix.DifferenceMax(matrixCSC) * 2, 0);
+            double k = 0.5;
 
             finalMatrixOptimization = (1 - k) * identityMatrix + k * finalMatrixOptimization;
 
