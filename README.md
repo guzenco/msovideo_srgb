@@ -72,4 +72,4 @@ In HDR mode, the target color space is treated as Native.
 # Known issues
 
 * The color space transform does not get applied properly to the mouse cursor, which results in it having wrong gamma and colors. This should be hardly noticeable with the default Windows cursor. Workaround: Force software rendering of the cursor, e.g. using [SoftCursor](https://www.monitortests.com/forum/Thread-SoftCursor).
-* R590 NVIDIA drivers with Windows 10 may cause unexpected color distortions.
+* R590 NVIDIA drivers may cause unexpected color distortions with or without MHC2 profiles. Workaround: Enable ACM (available only on Windows 11).
