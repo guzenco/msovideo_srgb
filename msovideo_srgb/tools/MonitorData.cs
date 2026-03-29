@@ -31,6 +31,7 @@ namespace msovideo_srgb
             Display = display;
             Path = path;
             MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2));
+            MHCProfileName = new string(MHCProfileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
             ClampSdr = clampSdr;
             HdrActive = hdrActive;
 
