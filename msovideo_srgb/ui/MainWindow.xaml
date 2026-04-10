@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:msovideo_srgb"
         ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         Title="Msovideo sRGB" Height="320" Width="500" MinHeight="150" MinWidth="300">
     <Window.DataContext>

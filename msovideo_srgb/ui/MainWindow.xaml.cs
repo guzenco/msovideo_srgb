@@ -13,7 +13,7 @@ namespace msovideo_srgb
     {
         private readonly MainViewModel _viewModel;
 
-        private ContextMenu _contextMenu;
+        private ContextMenuStrip _contextMenu;
 
         public MainWindow()
         {
@@ -103,38 +103,38 @@ namespace msovideo_srgb
                     WindowState = WindowState.Normal;
                 };
 
-            _contextMenu = new ContextMenu();
+            _contextMenu = new ContextMenuStrip();
 
-            _contextMenu.Popup += delegate { UpdateContextMenu(); };
+            _contextMenu.Opening += delegate { UpdateContextMenu(); };
 
-            notifyIcon.ContextMenu = _contextMenu;
+            notifyIcon.ContextMenuStrip = _contextMenu;
 
             Closed += delegate { notifyIcon.Dispose(); };
         }
 
         private void UpdateContextMenu()
         {
-            _contextMenu.MenuItems.Clear();
+            _contextMenu.Items.Clear();
 
             foreach (var monitor in _viewModel.Monitors)
             {
-                var item = new MenuItem();
-                _contextMenu.MenuItems.Add(item);
+                var item = new ToolStripMenuItem();
+                _contextMenu.Items.Add(item);
                 item.Text = monitor.Name;
                 item.Checked = monitor.Clamped;
                 item.Enabled = monitor.CanClamp;
                 item.Click += (sender, args) => monitor.Clamped = !monitor.Clamped;
             }
 
-            _contextMenu.MenuItems.Add("-");
+            _contextMenu.Items.Add(new ToolStripSeparator());
 
-            var reapplyItem = new MenuItem();
-            _contextMenu.MenuItems.Add(reapplyItem);
+            var reapplyItem = new ToolStripMenuItem();
+            _contextMenu.Items.Add(reapplyItem);
             reapplyItem.Text = "Reapply";
             reapplyItem.Click += delegate { ReapplyMonitorSettings(); };
 
-            var exitItem = new MenuItem();
-            _contextMenu.MenuItems.Add(exitItem);
+            var exitItem = new ToolStripMenuItem();
+            _contextMenu.Items.Add(exitItem);
             exitItem.Text = "Exit";
             exitItem.Click += delegate { Close(); };
         }
