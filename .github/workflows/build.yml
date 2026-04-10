@@ -30,14 +30,13 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore msovideo_srgb.sln
 
-      - name: Build
-        run: dotnet build msovideo_srgb.sln --configuration Release --no-restore /p:Version=${{ inputs.version }}
+      - name: Publish Single-File
+        run: dotnet publish msovideo_srgb/msovideo_srgb.csproj --configuration Release --runtime win-x64 --no-restore -p:PublishSingleFile=true -p:SelfContained=false -p:Version=${{ inputs.version }} -o publish
 
       - name: Prepare output folder
         run: |
           powershell -Command "New-Item -ItemType Directory -Force -Path output"
-          powershell -Command "Copy-Item msovideo_srgb\bin\x64\Release\net9.0-windows\*.exe output\"
-          powershell -Command "Copy-Item msovideo_srgb\bin\x64\Release\net9.0-windows\*.dll output\"
+          powershell -Command "Copy-Item publish\*.exe output\"
           powershell -Command "Copy-Item LICENSE output\"
           powershell -Command "Copy-Item LICENSE-THIRD-PARTY output\"
 
