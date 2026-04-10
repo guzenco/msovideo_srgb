@@ -1,4 +1,4 @@
-name: Build .NET Framework
+name: Build .NET
 
 on:
   workflow_dispatch:
@@ -22,28 +22,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1.3.1
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
 
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v1.2.0
+      - name: Restore dependencies
+        run: dotnet restore msovideo_srgb.sln
 
-      - name: Restore NuGet packages
-        run: nuget restore msovideo_srgb.sln
+      - name: Build
+        run: dotnet build msovideo_srgb.sln --configuration Release --no-restore /p:Version=${{ inputs.version }}
 
-      - name: Generate AssemblyInfo
-        run: |
-          Add-Content -Path "msovideo_srgb/Properties/AssemblyInfo.cs" -Value '[assembly: AssemblyVersion("${{ github.event.inputs.version }}")]'
-
-      - name: Build solution
-        run: msbuild msovideo_srgb.sln /p:Configuration=Release
       - name: Prepare output folder
         run: |
-          mkdir output
-          copy msovideo_srgb\bin\x64\Release\*.exe output\
-          copy msovideo_srgb\bin\x64\Release\*.dll output\
-          copy LICENSE output\
-          copy LICENSE-THIRD-PARTY output\
+          powershell -Command "New-Item -ItemType Directory -Force -Path output"
+          powershell -Command "Copy-Item msovideo_srgb\bin\x64\Release\net9.0-windows\*.exe output\"
+          powershell -Command "Copy-Item msovideo_srgb\bin\x64\Release\net9.0-windows\*.dll output\"
+          powershell -Command "Copy-Item LICENSE output\"
+          powershell -Command "Copy-Item LICENSE-THIRD-PARTY output\"
 
       # Upload the output folder as artifact
       - name: Upload artifact
