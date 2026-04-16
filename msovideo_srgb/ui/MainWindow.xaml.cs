@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -12,6 +13,7 @@ namespace msovideo_srgb
     public partial class MainWindow
     {
         private readonly MainViewModel _viewModel;
+        private readonly List<string> _args;
 
         private ContextMenuStrip _contextMenu;
 
@@ -31,14 +33,25 @@ namespace msovideo_srgb
 
             var args = Environment.GetCommandLineArgs().ToList();
             args.RemoveAt(0);
+            _args = args;
 
             if (args.Contains("-minimize"))
             {
                 WindowState = WindowState.Minimized;
-                Hide();
             }
 
             InitializeTrayIcon();
+
+            Loaded += OnLoaded;
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (_args.Contains("-minimize"))
+            {
+                Hide();
+                WindowState = WindowState.Minimized;
+            }
         }
 
         protected override void OnStateChanged(EventArgs e)
