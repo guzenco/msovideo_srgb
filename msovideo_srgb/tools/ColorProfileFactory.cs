@@ -50,51 +50,36 @@ namespace msovideo_srgb
             Matrix white = Colorimetry.RGBToXYZ(Colorimetry.D65);
             Matrix white3x3 = Matrix.FromDiagonal(white);
 
-            Matrix target = matrixCSC.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
+            Matrix rgbToXYZ = Colorimetry.RGBToXYZ(Colorimetry.sRGB);
+
+            Matrix target = rgbToXYZ.Inverse() * matrixCSC * rgbToXYZ;
+            target = target.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
+            target = Matrix.FromDiagonal(target * white).Inverse() * white3x3 * target;
 
             Matrix identityMatrix = Matrix.FromDiagonal(Matrix.One3x1());
             Matrix finalMatrixOptimization = identityMatrix;
-            int n = 1023;
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10000; i++)
             {
-                Matrix optimizedMatrixCSC = matrixCSC * finalMatrixOptimization;
+                Matrix result = rgbToXYZ.Inverse() * matrixCSC * finalMatrixOptimization * rgbToXYZ;
 
-                Matrix finalMatrixSum = Matrix.Zero3x3();
-                Matrix targetSum = Matrix.Zero3x3();
+                result = result.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
 
-                for (int j = 0; j < n; j++)
-                {
-                    double scale = srgbCurve.SampleAt((j + 1.0) / n);
+                result = result.Map((r, c, x) => sampleAt(r, c, srgbCurve.SampleInverseAt(x)));
 
-                    Matrix finalMatrix = optimizedMatrixCSC.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
+                result = Matrix.FromDiagonal(result * white).Inverse() * white3x3 * result;
 
-                    finalMatrix *= scale;
-                    finalMatrix = finalMatrix.Map((r, c, x) => sampleAt(r, c, srgbCurve.SampleInverseAt(x)));
-                    finalMatrix /= scale;
-
-                    finalMatrixSum += finalMatrix;
-                    targetSum += target;
-
-                }
-
-                finalMatrixSum = Matrix.FromDiagonal(finalMatrixSum * white).Inverse() * white3x3 * finalMatrixSum;
-                targetSum = Matrix.FromDiagonal(targetSum * white).Inverse() * white3x3 * targetSum;
-
-                Matrix matrixOptimization = finalMatrixSum.Inverse() * targetSum;
+                Matrix matrixOptimization = result.Inverse() * target;
 
                 if (identityMatrix.DifferenceMax(matrixOptimization) < 1E-10)
                 {
                     break;
                 }
 
+                matrixOptimization = 0.9 * identityMatrix + 0.1 * matrixOptimization;
                 finalMatrixOptimization = finalMatrixOptimization * matrixOptimization;
 
             }
-
-            double k = 0.5;
-
-            finalMatrixOptimization = (1 - k) * identityMatrix + k * finalMatrixOptimization;
 
             return finalMatrixOptimization;
         }
