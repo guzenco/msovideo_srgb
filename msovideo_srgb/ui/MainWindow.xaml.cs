@@ -36,8 +36,8 @@ namespace msovideo_srgb
 
             if (args.Contains("-minimize"))
             {
+                ShowInTaskbar = false;
                 WindowState = WindowState.Minimized;
-                Hide();
             }
 
             InitializeTrayIcon();
@@ -60,7 +60,8 @@ namespace msovideo_srgb
         {
             if (WindowState == WindowState.Minimized)
             {
-                Hide();
+                ShowInTaskbar = false;
+                WindowState = WindowState.Minimized;
             }
 
             base.OnStateChanged(e);
@@ -114,8 +115,9 @@ namespace msovideo_srgb
             notifyIcon.MouseDoubleClick +=
                 delegate
                 {
-                    Show();
+                    ShowInTaskbar = true;
                     WindowState = WindowState.Normal;
+                    Activate();
                 };
 
             _contextMenu = new ContextMenu();
