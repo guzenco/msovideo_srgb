@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Interop;
+using System.Windows.Threading;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.Forms.MessageBox;
 
@@ -39,6 +41,19 @@ namespace msovideo_srgb
             }
 
             InitializeTrayIcon();
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            var source = (HwndSource)PresentationSource.FromVisual(this);
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                DisplayStateObserver.Init(source);
+                DisplayStateObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
+            }), DispatcherPriority.Background);
         }
 
         protected override void OnStateChanged(EventArgs e)
