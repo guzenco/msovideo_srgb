@@ -305,11 +305,18 @@ namespace msovideo_srgb
 
         private void HandleClampException(Exception e)
         {
-            MessageBox.Show(e.Message);
-            _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
-            ClampSdr = _clamped;
-            _viewModel.SaveConfig();
-            OnPropertyChanged(nameof(Clamped));
+            try
+            {
+                MessageBox.Show(e.Message);
+                _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
+                ClampSdr = _clamped;
+                OnPropertyChanged(nameof(Clamped));
+            }
+            catch { }
+            finally
+            {
+                _viewModel.SaveConfig();
+            }
         }
         
         public bool Clamped

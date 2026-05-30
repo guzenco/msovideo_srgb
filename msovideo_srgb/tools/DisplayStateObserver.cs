@@ -34,6 +34,8 @@ namespace msovideo_srgb
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr RegisterPowerSettingNotification(IntPtr hRecipient, ref Guid PowerSettingGuid, int Flags);
 
+        private static int powerState = 1;
+
         private static IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             if (msg == WM_POWERBROADCAST && wParam.ToInt32() == PBT_POWERSETTINGCHANGE)
@@ -41,10 +43,12 @@ namespace msovideo_srgb
                 POWERBROADCAST_SETTING data = (POWERBROADCAST_SETTING)Marshal.PtrToStructure(lParam, typeof(POWERBROADCAST_SETTING));
                 if (data.PowerSetting == GUID_CONSOLE_DISPLAY_STATE)
                 {
-                    if (data.Data != 0)
+                    int newPowerState = data.Data;
+                    if (powerState == 0 && newPowerState != 0)
                     {
                         OnDisplayWake?.Invoke(null, null);
                     }
+                    powerState = newPowerState;
                 }
             }
             if (msg == WM_WTSSESSION_CHANGE)

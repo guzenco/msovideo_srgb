@@ -36,7 +36,6 @@ namespace msovideo_srgb
 
             if (args.Contains("-minimize"))
             {
-                ShowInTaskbar = false;
                 WindowState = WindowState.Minimized;
             }
 
@@ -54,6 +53,8 @@ namespace msovideo_srgb
                 DisplayStateObserver.Init(source);
                 DisplayStateObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
             }), DispatcherPriority.Background);
+            
+            OnStateChanged(null);
         }
 
         protected override void OnStateChanged(EventArgs e)
