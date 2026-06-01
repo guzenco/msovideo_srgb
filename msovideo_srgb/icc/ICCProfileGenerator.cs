@@ -354,27 +354,17 @@ namespace msovideo_srgb
 
             string path = Path.Combine(profiles_path, profileName);
 
-            try
+            if (File.Exists(path))
             {
+                byte[] existingData = File.ReadAllBytes(path);
 
-                if (File.Exists(path))
+                if (existingData.Length == profileData.Length && existingData.SequenceEqual(profileData))
                 {
-                    byte[] existingData = File.ReadAllBytes(path);
-
-                    if (existingData.Length == profileData.Length &&
-                        existingData.SequenceEqual(profileData))
-                    {
-                        return;
-                    }
+                    return;
                 }
-
-                File.WriteAllBytes(path, profileData);
-
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving profile: {ex.Message}");
-            }
+
+            File.WriteAllBytes(path, profileData);
         }
     }
 }

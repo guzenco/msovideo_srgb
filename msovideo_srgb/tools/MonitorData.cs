@@ -307,6 +307,7 @@ namespace msovideo_srgb
         {
             try
             {
+                if (e is DisplayNotFoundException) return;
                 MessageBox.Show(e.Message);
                 _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
                 ClampSdr = _clamped;

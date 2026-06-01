@@ -159,10 +159,7 @@ namespace msovideo_srgb
 
         private void ReapplyMonitorSettings()
         {
-            foreach (var monitor in _viewModel.Monitors)
-            {
-                monitor.ReapplyClamp();
-            }
+            _viewModel.ReapplyAll();
         }
     }
 }

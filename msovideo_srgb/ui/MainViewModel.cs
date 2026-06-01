@@ -120,21 +120,25 @@ namespace msovideo_srgb
                 Monitors.Add(monitor);
             }
 
-            foreach (var monitor in Monitors)
+            ReapplyAll();
+        }
+        
+        public void ReapplyAll()
+        {
+            try
             {
-                monitor.ReapplyClamp();
+                foreach (var monitor in Monitors)
+                {
+                    monitor.ReapplyClamp();
+                }
             }
+            catch (InvalidOperationException) { }
         }
 
-        private static int stateId = 0;
         public void OnDisplaySettingsChanged(object sender, EventArgs e)
         {
-            int curentId = ++stateId;
             Thread.Sleep(100);
-            if (stateId == curentId)
-            {
-                UpdateMonitors();
-            }
+            UpdateMonitors();
         }
 
         public void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)

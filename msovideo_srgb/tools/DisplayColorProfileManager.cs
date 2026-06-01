@@ -244,7 +244,7 @@ namespace msovideo_srgb
                 }
             }
 
-            throw new InvalidOperationException("Display not found in DisplayConfig enumeration.");
+            throw new DisplayNotFoundException("Display not found in DisplayConfig enumeration.");
         }
     }
 

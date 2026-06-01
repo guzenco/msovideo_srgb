@@ -107,7 +107,7 @@
     <Compile Include="ui\RangeRule.cs" />
     <Compile Include="colorimetry\GammaToneCurve.cs" />
     <Compile Include="icc\ICCBinaryReader.cs" />
-    <Compile Include="icc\ICCProfileException.cs" />
+    <Compile Include="tools\Exceptions.cs" />
     <Compile Include="colorimetry\SrgbEOTF.cs" />
     <Compile Include="colorimetry\ToneCurve.cs" />
     <Page Include="ui\AboutWindow.xaml" />
