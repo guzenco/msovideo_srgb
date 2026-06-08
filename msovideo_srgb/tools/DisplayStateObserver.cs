@@ -8,10 +8,17 @@ namespace msovideo_srgb
     {
         public static event EventHandler OnDisplayWake;
 
-        public static void Init(HwndSource source)
+        private static HwndSource hwndSource;
+
+        public static void Init()
         {
-            source.AddHook(WndProc);
-            RegisterPowerSettingNotification(source.Handle, ref GUID_CONSOLE_DISPLAY_STATE, 0);
+            if (hwndSource == null)
+            {
+                HwndSourceParameters parameters = new HwndSourceParameters() { WindowStyle = 0, ParentWindow = new IntPtr(-3) };
+                hwndSource = new HwndSource(parameters);    
+                hwndSource.AddHook(WndProc);
+                RegisterPowerSettingNotification(hwndSource.Handle, ref GUID_CONSOLE_DISPLAY_STATE, 0);
+            }
         }
 
         internal static Guid GUID_CONSOLE_DISPLAY_STATE = new Guid("6FE69556-704A-47A0-8F24-C28D936FDA47");

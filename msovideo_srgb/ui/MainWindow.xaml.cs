@@ -31,38 +31,26 @@ namespace msovideo_srgb
             SystemEvents.DisplaySettingsChanged += _viewModel.OnDisplaySettingsChanged;
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
 
+            DisplayStateObserver.Init();
+            DisplayStateObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
+
             var args = Environment.GetCommandLineArgs().ToList();
             args.RemoveAt(0);
 
             if (args.Contains("-minimize"))
             {
                 WindowState = WindowState.Minimized;
+                Hide();
             }
 
             InitializeTrayIcon();
-        }
-
-        protected override void OnSourceInitialized(EventArgs e)
-        {
-            base.OnSourceInitialized(e);
-
-            var source = (HwndSource)PresentationSource.FromVisual(this);
-
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                DisplayStateObserver.Init(source);
-                DisplayStateObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
-            }), DispatcherPriority.Background);
-            
-            OnStateChanged(null);
         }
 
         protected override void OnStateChanged(EventArgs e)
         {
             if (WindowState == WindowState.Minimized)
             {
-                ShowInTaskbar = false;
-                WindowState = WindowState.Minimized;
+                Hide();
             }
 
             base.OnStateChanged(e);
@@ -116,9 +104,8 @@ namespace msovideo_srgb
             notifyIcon.MouseDoubleClick +=
                 delegate
                 {
-                    ShowInTaskbar = true;
+                    Show();
                     WindowState = WindowState.Normal;
-                    Activate();
                 };
 
             _contextMenu = new ContextMenu();
