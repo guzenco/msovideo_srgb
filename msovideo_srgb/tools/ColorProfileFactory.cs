@@ -327,23 +327,30 @@ namespace msovideo_srgb
             if (gamma != null || (useVcgt && profile.vcgt != null))
             {
                 luts = new double[3][];
+
+                Func<int, double, double> gammaSampleAt;
+                if (gamma != null)
+                {
+                    gammaSampleAt = (i, value) => gamma.SampleAt(value);
+                }
+                else
+                {
+                    gammaSampleAt = (i, value) => profile.TrcSample(i, value, !useVcgt, matrixWhite);
+                }
+
                 for (int i = 0; i < 3; i++)
                 {
                     luts[i] = new double[resolution];
+                    double black = gammaSampleAt(i, 0);
                     for (int j = 1; j < resolution; j++)
                     {
                         double value = j / (resolution - 1.0);
 
-                        if (gamma != null)
-                        {
-                            value = gamma.SampleAt(value);
-                        }
-                        else
-                        {
-                            value = profile.TrcSample(i, value, !useVcgt, matrixWhite);
-                        }
+                        value = gammaSampleAt(i, value);
 
-                        value = profile.TrcSampleInverse(i, value * matrixWhite[i, i]);
+                        value = black + (value - black) * (matrixWhite[i, i] - black) / (1 - black);
+
+                        value = profile.TrcSampleInverse(i, value);
 
                         luts[i][j] = value;
                     }

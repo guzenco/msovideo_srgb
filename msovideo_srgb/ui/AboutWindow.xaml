@@ -10,10 +10,10 @@
         WindowStartupLocation="CenterOwner"
         SnapsToDevicePixels="True">
     <StackPanel Margin="6">
-        <TextBlock FontSize="15" HorizontalAlignment="Center" TextAlignment="Center">
-            novideo_srgb v4.2 by ledoge
-        </TextBlock>
         <TextBlock FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" Text="{Binding Version, StringFormat='msovideo_srgb v{0} by guzenco'}"/>
+        <TextBlock FontSize="15" HorizontalAlignment="Center" TextAlignment="Center">
+            fork of novideo_srgb by ledoge
+        </TextBlock>
         <TextBlock HorizontalAlignment="Center" TextAlignment="Center">
             Licensed under GPLv3 <LineBreak /> <LineBreak />
             Source code and releases hosted at <LineBreak />

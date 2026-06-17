@@ -70,7 +70,7 @@ namespace msovideo_srgb
             
             double sample = TrcSample(i, x * white_x, useVsgt);
 
-            return black + (sample - black) / (white - black) / (1 + black);
+            return black + (sample - black) * (1 - black) / (white - black);
         }
 
         private ICCMatrixProfile()

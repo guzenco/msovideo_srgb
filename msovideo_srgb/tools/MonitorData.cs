@@ -221,6 +221,8 @@ namespace msovideo_srgb
                     var trcBlack = profile.trcBlack;
                     var tagBlack = profile.tagBlack;
                     
+                    tagBlack *= profile.luminance / luminance;
+
                     ToneCurve curve;
                     ToneCurve gamma;
 
