@@ -19,5 +19,6 @@
             Source code and releases hosted at <LineBreak />
             <Hyperlink RequestNavigate="OnRequestNavigate" NavigateUri="https://github.com/guzenco/msovideo_srgb">https://github.com/guzenco/msovideo_srgb</Hyperlink>
         </TextBlock>
+        <TextBlock FontSize="8" HorizontalAlignment="Center" TextAlignment="Center" Foreground="#80000000" Text="{Binding Commit, StringFormat='({0})'}"/>
     </StackPanel>
 </Window>

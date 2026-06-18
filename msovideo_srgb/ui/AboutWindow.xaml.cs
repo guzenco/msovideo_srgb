@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Navigation;
 using System.Linq;
+using System.Reflection;
 
 namespace msovideo_srgb
 {
@@ -20,6 +21,7 @@ namespace msovideo_srgb
             };
             System.Diagnostics.Process.Start(processStartInfo);
         }
-        public static string Version => string.Join(".", System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString().Split('.').Take(3));
+        public static string Version => string.Join(".", Assembly.GetExecutingAssembly().GetName().Version.ToString().Split('.').Take(3));
+        public static string Commit => Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "Commit")?.Value;
     }
 }

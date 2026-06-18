@@ -34,6 +34,7 @@ jobs:
       - name: Generate AssemblyInfo
         run: |
           Add-Content -Path "msovideo_srgb/Properties/AssemblyInfo.cs" -Value '[assembly: AssemblyVersion("${{ github.event.inputs.version }}")]'
+          Add-Content -Path "msovideo_srgb/Properties/AssemblyInfo.cs" -Value '[assembly: AssemblyMetadata("Commit", "${{ github.sha }}")]'
 
       - name: Build solution
         run: msbuild msovideo_srgb.sln /p:Configuration=Release
