@@ -1,4 +1,5 @@
 name: Release
+run-name: Release v${{ github.event.inputs.version }} @ ${{ github.sha }}
 
 on:
   workflow_dispatch:
@@ -6,13 +7,15 @@ on:
       version:
         description: 'Release version'
         required: true
+        pattern: '^[0-9]+\\.[0-9]+\\.[0-9]+$'
       notes:
         description: 'Release notes'
         required: true
       prerelease:
-        description: 'Is this a prerelease?'
+        description: 'Pre-release'
         required: true
-        default: 'false'
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -31,7 +34,7 @@ jobs:
           path: ./artifact
 
       - name: Create ZIP from artifact
-        run: powershell Compress-Archive -Path "artifact\*" -DestinationPath "release.zip"
+        run: powershell Compress-Archive -Path "artifact\*" -DestinationPath "msovideo_srgb.zip"
 
       - name: Prepare release notes 
         run: | 
@@ -45,6 +48,6 @@ jobs:
           name: v${{ github.event.inputs.version }}
           body_path: RELEASE_NOTES.md
           prerelease: ${{ github.event.inputs.prerelease }}
-          files: release.zip
+          files: msovideo_srgb.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

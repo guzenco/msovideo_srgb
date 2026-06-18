@@ -1,4 +1,4 @@
-## [Download latest release](https://github.com/guzenco/msovideo_srgb/releases/latest/download/release.zip)
+## [Download latest release](https://github.com/guzenco/msovideo_srgb/releases/latest/download/msovideo_srgb.zip)
 
 # About
 This tool uses an ICC profile with MHC2 tag to convert colors before sending them to a wide gamut monitor to effectively clamp it to sRGB (alternatively: Display P3, Adobe RGB or BT.2020), based on the chromaticities provided in its EDID.
@@ -26,7 +26,7 @@ Windows 10, version 2004 (20H1) or later:
 * Qualcomm 8CX Gen 3, or later; 7C Gen 3, or later
 
 # Usage
-Extract `release.zip` somewhere under your user directory and run `msovideo_srgb.exe`. To enable/disable the sRGB clamp for a monitor, simply toggle the "Clamped" checkbox. For using ICC profiles and configuring dithering, click the "Advanced" button.
+Extract `msovideo_srgb.zip` somewhere under your user directory and run `msovideo_srgb.exe`. To enable/disable the sRGB clamp for a monitor, simply toggle the "Clamped" checkbox. For using ICC profiles and configuring dithering, click the "Advanced" button.
 
 Generally, the clamp should persist through reboots and updates, but it can break sometimes. You can choose to leave the application running minimized in the background to have it automatically reapply the clamp. 
 
