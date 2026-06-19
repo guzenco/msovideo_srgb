@@ -279,9 +279,11 @@ namespace msovideo_srgb
             {
                 targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
                 matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * targetWhite);
-                double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
-                matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
+                matrixWhite /= matrixWhite.Max();
             }
+
+            double whiteLuminance = profile.luminance * (profile.matrix * (matrixWhite * Matrix.One3x1()))[1];
+            matrixWhite *= Math.Min(luminance, whiteLuminance) / whiteLuminance;
 
             Matrix reportWhite = reportWhiteD65 ? Colorimetry.RGBToXYZ(Colorimetry.D65) : targetWhite;
 

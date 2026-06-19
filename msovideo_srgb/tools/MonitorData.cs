@@ -52,6 +52,7 @@ namespace msovideo_srgb
             }
 
             ProfilePath = "";
+            MaxLuminance = 80;
             CustomGamma = 2.2;
             CustomPercentage = 100;
             UseVcgt = false;
@@ -79,7 +80,9 @@ namespace msovideo_srgb
             }
         }
         public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive, 
-            bool clampSdr, bool useIcc, string profilePath, bool calibrateGamma, int selectedGamma, double customGamma, double customPercentage, bool useVcgt, bool optimizeMatrix, int targetWhite, double customWhiteX, double customWhiteY,
+            bool clampSdr, bool useIcc, string profilePath,
+            bool limitLuminance, int maxLuminance,
+            bool calibrateGamma, int selectedGamma, double customGamma, double customPercentage, bool useVcgt, bool optimizeMatrix, int targetWhite, double customWhiteX, double customWhiteY,
             bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB,
             int target, int resolution,
             bool useIccHDR, string profilePathHDR, bool calibrateGammaHDR, int peakTarget, double bpcThreshold, int targetWhiteHDR, double customWhiteHdrX, double customWhiteHdrY):
@@ -87,6 +90,8 @@ namespace msovideo_srgb
         {
             UseIcc = useIcc;
             ProfilePath = profilePath;
+            LimitLuminance = limitLuminance;
+            MaxLuminance = maxLuminance;
             CalibrateGamma = calibrateGamma;
             SelectedGamma = selectedGamma;
             CustomGamma = customGamma;
@@ -209,14 +214,13 @@ namespace msovideo_srgb
                 if (!TargetWhitePoint.Equals(Colorimetry.NativeWhite))
                 {
                     var matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * Colorimetry.RGBToXYZ(TargetWhitePoint));
-                    double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
-                    Matrix newWhiteLumi = Matrix.FromValues(new[,]
-                    {
-                        { matrixWhite[0,0] / scale },
-                        { matrixWhite[1,1] / scale },
-                        { matrixWhite[2,2] / scale }
-                    });
-                    luminance *= (profile.matrix * newWhiteLumi)[1];
+                    matrixWhite /= matrixWhite.Max();
+                    luminance *= (profile.matrix * (matrixWhite * Matrix.One3x1()))[1];
+                }
+
+                if (LimitLuminance)
+                {
+                    luminance = Math.Min(luminance, MaxLuminance);
                 }
 
                 ToneCurve gamma = null;
@@ -369,6 +373,10 @@ namespace msovideo_srgb
         public bool UseIcc { set; get; }
 
         public string ProfilePath { set; get; }
+
+        public bool LimitLuminance { set; get; }
+
+        public int MaxLuminance { set; get; }
 
         public bool CalibrateGamma { set; get; }
 

@@ -17,6 +17,8 @@ namespace msovideo_srgb
         private int _resolution;
         private bool _useIcc;
         private string _profilePath;
+        private bool _limitLuminance;
+        private int _maxLuminance;
         private bool _calibrateGamma;
         private int _selectedGamma;
         private double _customGamma;
@@ -51,6 +53,8 @@ namespace msovideo_srgb
             _resolution = monitor.Resolution;
             _useIcc = monitor.UseIcc;
             _profilePath = monitor.ProfilePath;
+            _limitLuminance = monitor.LimitLuminance;
+            _maxLuminance = monitor.MaxLuminance;
             _calibrateGamma = monitor.CalibrateGamma;
             _selectedGamma = monitor.SelectedGamma;
             _customGamma = monitor.CustomGamma;
@@ -83,6 +87,10 @@ namespace msovideo_srgb
             _monitor.UseIcc = _useIcc;
             ChangedCalibration |= _monitor.ProfilePath != _profilePath;
             _monitor.ProfilePath = _profilePath;
+            ChangedCalibration |= _monitor.LimitLuminance != _limitLuminance;
+            _monitor.LimitLuminance = _limitLuminance;
+            ChangedCalibration |= _monitor.MaxLuminance != _maxLuminance;
+            _monitor.MaxLuminance = _maxLuminance;
             ChangedCalibration |= _monitor.CalibrateGamma != _calibrateGamma;
             _monitor.CalibrateGamma = _calibrateGamma;
             ChangedCalibration |= _monitor.SelectedGamma != _selectedGamma;
@@ -166,6 +174,28 @@ namespace msovideo_srgb
         }
 
         public string ProfileName => Path.GetFileName(ProfilePath);
+
+        public bool LimitLuminance
+        {
+            set
+            {
+                if (value == _limitLuminance) return;
+                _limitLuminance = value;
+                OnPropertyChanged();
+            }
+            get => _limitLuminance;
+        }
+
+        public int MaxLuminance
+        {
+            set
+            {
+                if (value == _maxLuminance) return;
+                _maxLuminance = value;
+                OnPropertyChanged();
+            }
+            get => _maxLuminance;
+        }
 
         public bool CalibrateGamma
         {

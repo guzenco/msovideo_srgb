@@ -158,6 +158,19 @@
                                         Width="75" Margin="6,0,0,0" />
                                 </Grid>
                                 <StackPanel Orientation="Horizontal">
+                                    <CheckBox IsChecked="{Binding LimitLuminance}" VerticalAlignment="Center">Limit luminance to</CheckBox>
+                                    <TextBox IsEnabled="{Binding LimitLuminance}" Style="{StaticResource TextBoxInError}" VerticalContentAlignment="Center" TextAlignment="Right" Width="50" Height="22" Margin="6,0,0,0">
+                                        <TextBox.Text>
+                                            <Binding Path="MaxLuminance" UpdateSourceTrigger="PropertyChanged">
+                                                <Binding.ValidationRules>
+                                                    <local:RangeRule Min="10" Max="10000" />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock Text="cd/m2" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                                     <CheckBox IsChecked="{Binding CalibrateGamma}" VerticalAlignment="Center">Calibrate gamma to</CheckBox>
                                     <ComboBox IsEnabled="{Binding CalibrateGamma}" SelectedIndex="{Binding SelectedGamma}"
                                           VerticalAlignment="Center" Margin="6,0,0,0">
@@ -268,7 +281,7 @@
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="with" VerticalAlignment="Center"/>
-                                        <TextBox IsEnabled="{Binding CalibrateGammaHDR}" Style="{StaticResource TextBoxInError}" VerticalContentAlignment="Center" Width="50" Height="22" Margin="6,0,0,0">
+                                        <TextBox IsEnabled="{Binding CalibrateGammaHDR}" Style="{StaticResource TextBoxInError}" VerticalContentAlignment="Center" TextAlignment="Right" Width="50" Height="22" Margin="6,0,0,0">
                                             <TextBox.Text>
                                                 <Binding Path="TargetPeak" UpdateSourceTrigger="PropertyChanged">
                                                     <Binding.ValidationRules>
@@ -281,7 +294,7 @@
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="and BPC threshold" VerticalAlignment="Center"/>
-                                    <TextBox IsEnabled="{Binding CalibrateGammaHDR}" Style="{StaticResource TextBoxInError}" VerticalContentAlignment="Center" Width="50" Height="22" Margin="6,0,0,0">
+                                    <TextBox IsEnabled="{Binding CalibrateGammaHDR}" Style="{StaticResource TextBoxInError}" VerticalContentAlignment="Center" TextAlignment="Right" Width="50" Height="22" Margin="6,0,0,0">
                                         <TextBox.Text>
                                             <Binding Path="BPCThreshold" UpdateSourceTrigger="PropertyChanged">
                                                 <Binding.ValidationRules>
