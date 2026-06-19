@@ -9,14 +9,12 @@ namespace msovideo_srgb
         private double _b;
         private readonly double _c;
 
-        private readonly double _trc_black;
-        private readonly double _tag_black;
+        private readonly double _black;
 
-        public unsafe GammaToneCurve(double gamma, double trc_black = 0, double tag_black = 0, double outputOffset = 1, bool relative = false)
+        public unsafe GammaToneCurve(double gamma, double black = 0, double outputOffset = 1, bool relative = false)
         {
-            _trc_black = trc_black;
-            _tag_black = tag_black;
-            if (tag_black == 0)
+            _black = black;
+            if (_black == 0)
             {
                 _gamma = gamma;
                 return;
@@ -26,15 +24,15 @@ namespace msovideo_srgb
             {
                 _gamma = !relative
                     ? gamma
-                    : Math.Log((tag_black - 1) * Math.Pow(2, gamma) / (tag_black * Math.Pow(2, gamma) - 1), 2);
-                _a = 1 - tag_black;
-                _c = tag_black;
+                    : Math.Log((_black - 1) * Math.Pow(2, gamma) / (_black * Math.Pow(2, gamma) - 1), 2);
+                _a = 1 - _black;
+                _c = _black;
             }
             else
             {
-                var outBlack = outputOffset * tag_black;
+                var outBlack = outputOffset * _black;
                 var btWhite = 1 - outBlack;
-                var btBlack = tag_black - outBlack;
+                var btBlack = _black - outBlack;
                 _c = outBlack;
 
                 if (!relative)
@@ -78,6 +76,8 @@ namespace msovideo_srgb
             }
         }
 
+        public bool IsAbsolute() => false;
+
         private void CalculateBT1886(double white, double black)
         {
             var lwg = Math.Pow(white, 1 / _gamma);
@@ -89,9 +89,8 @@ namespace msovideo_srgb
         public double SampleAt(double x)
         {
             if (x >= 1) return 1;
-            var compensation = _tag_black - _trc_black;
             var res = _a * Math.Pow(Math.Max(x + _b, 0), _gamma) + _c;
-            return (res - compensation) / (1 - compensation);
+            return (res - _black) / (1.0 - _black);
         }
 
         public double SampleInverseAt(double x)

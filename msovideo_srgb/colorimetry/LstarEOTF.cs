@@ -4,17 +4,12 @@ namespace msovideo_srgb
 {
     public class LstarEOTF : ToneCurve
     {
-        private double _black;
-
-        public LstarEOTF(double black)
-        {
-            _black = black;
-        }
+        public bool IsAbsolute() => false;
 
         public double SampleAt(double x)
         {
             if (x >= 1) return 1;
-            if (x <= 0) return _black;
+            if (x <= 0) return 0;
 
             const double delta = 6 / 29d;
 
@@ -30,7 +25,7 @@ namespace msovideo_srgb
                 result = 3 * (delta * delta) * (x - 4 / 29d);
             }
 
-            return result * (1 - _black) + _black;
+            return result;
         }
 
         public double SampleInverseAt(double x)

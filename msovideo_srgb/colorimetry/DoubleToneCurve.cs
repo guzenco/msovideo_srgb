@@ -9,6 +9,8 @@
             _values = values;
         }
 
+        public bool IsAbsolute() => true;
+
         public double SampleAt(double x)
         {
             if (x == 0) return _values[0];

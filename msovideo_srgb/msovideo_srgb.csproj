@@ -91,6 +91,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="colorimetry\ScaledToneCurve.cs" />
     <Compile Include="colorimetry\ST2084.cs" />
     <Compile Include="icc\ICCProfileGenerator.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />

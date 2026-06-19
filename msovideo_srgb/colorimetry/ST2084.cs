@@ -23,6 +23,8 @@ namespace msovideo_srgb
             _bpsThreashold = bpsThreashold;
         }
 
+        public bool IsAbsolute() => true;
+
         public double SampleAt(double x)
         {
             double pow = Math.Pow(x, 1.0 / m2);
@@ -32,12 +34,11 @@ namespace msovideo_srgb
 
             if (L < _bpsThreashold)
             {
-                L = (_displayMinLuminance / _displayMaxLuminance) * (1.0 - L / _bpsThreashold)  + L / _displayMaxLuminance;
+                L = _displayMinLuminance + L / _bpsThreashold * (_bpsThreashold - _displayMinLuminance);
             }
-            else
-            {
-                L /=  _displayMaxLuminance;
-            }
+
+            L /= _displayMaxLuminance;
+
             L = Math.Min(L, 1);
 
             return L;

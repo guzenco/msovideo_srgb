@@ -197,7 +197,10 @@ namespace msovideo_srgb
             if (!doClamp) return;
 
             if (UseEdid)
-                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, TargetColorSpace, TargetWhitePoint, ReportWhiteD65 || HdrActive, ReportColorSpaceSRGB && !HdrActive, ReportGammaSRGB && !HdrActive);
+                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, TargetColorSpace, TargetWhitePoint,
+                    reportWhiteD65: ReportWhiteD65 || HdrActive,
+                    reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
+                    reportGammaSRGB: ReportGammaSRGB && !HdrActive);
             else if (UseIcc)
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePath);
@@ -216,48 +219,43 @@ namespace msovideo_srgb
                     luminance *= (profile.matrix * newWhiteLumi)[1];
                 }
 
+                ToneCurve gamma = null;
                 if (CalibrateGamma)
                 {
-                    var trcBlack = profile.trcBlack;
                     var tagBlack = profile.tagBlack;
                     
                     tagBlack *= profile.luminance / luminance;
 
-                    ToneCurve curve;
-                    ToneCurve gamma;
-
                     switch (SelectedGamma)
                     {
                         case 0:
-                            curve = new SrgbEOTF(0);
-                            gamma = new SrgbEOTF(trcBlack);
+                            gamma = new SrgbEOTF();
                             break;
                         case 1:
-                            curve = new GammaToneCurve(2.4, 0, tagBlack, 0);
-                            gamma = new GammaToneCurve(2.4, trcBlack, tagBlack, 0);
+                            gamma = new GammaToneCurve(2.4, tagBlack, 0);
                             break;
                         case 2:
-                            curve = new GammaToneCurve(CustomGamma, 0, tagBlack, CustomPercentage / 100);
-                            gamma = new GammaToneCurve(CustomGamma, trcBlack, tagBlack, CustomPercentage / 100);
+                            gamma = new GammaToneCurve(CustomGamma, tagBlack, CustomPercentage / 100);
                             break;
                         case 3:
-                            curve = new GammaToneCurve(CustomGamma, 0, tagBlack, CustomPercentage / 100, true);
-                            gamma = new GammaToneCurve(CustomGamma, trcBlack, tagBlack, CustomPercentage / 100, true);
+                            gamma = new GammaToneCurve(CustomGamma, tagBlack, CustomPercentage / 100, true);
                             break;
                         case 4:
-                            curve = new LstarEOTF(0);
-                            gamma = new LstarEOTF(trcBlack);
+                            gamma = new LstarEOTF();
                             break;
                         default:
                             throw new NotSupportedException("Unsupported gamma type " + SelectedGamma);
                     }
+                }
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance, ReportWhiteD65 || HdrActive, ReportColorSpaceSRGB && !HdrActive, ReportGammaSRGB && !HdrActive, UseVcgt, OptimizeMatrix, HdrActive, curve, gamma);
-                }
-                else
-                {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance, ReportWhiteD65 || HdrActive, ReportColorSpaceSRGB && !HdrActive, ReportGammaSRGB && !HdrActive, UseVcgt, OptimizeMatrix, HdrActive);
-                }
+                ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance,
+                        reportWhiteD65: ReportWhiteD65 || HdrActive,
+                        reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
+                        reportGammaSRGB: ReportGammaSRGB && !HdrActive,
+                        useVcgt: UseVcgt,
+                        optimizeMatrix: OptimizeMatrix,
+                        acmMode: HdrActive,
+                        gamma: gamma);
             }
 
             ApplyProfile(MHCProfileNameSDR, false);
@@ -280,10 +278,11 @@ namespace msovideo_srgb
                     luminance *= (profile.matrix * newWhiteLumi)[1];
                 }
 
+                ToneCurve gamma = null;
                 if (CalibrateGammaHDR)
                 {
-                    
-                    var gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, luminance, BPCThreshold);
+
+                    gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, luminance, BPCThreshold);
 
                     Matrix newTrcLumi = Matrix.FromValues(new[,]
                     {
@@ -292,14 +291,12 @@ namespace msovideo_srgb
                         { gamma.SampleAt(1) }
                     });
 
-                    luminance *= (profile.matrix * newTrcLumi)[1];
+                    luminance *= (profile.matrix * newTrcLumi)[1];  
+                }
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, luminance, false, false, false, false, false, false, new SrgbEOTF(0), gamma);
-                }
-                else
-                {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, luminance, false, false, false, false, false, false, new SrgbEOTF(0));
-                }
+                ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, luminance,
+                        gamma: gamma,
+                        curve: new SrgbEOTF());
 
                 ApplyProfile(MHCProfileNameHDR, true);
             }

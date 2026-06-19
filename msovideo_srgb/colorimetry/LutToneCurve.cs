@@ -11,6 +11,8 @@
             _divisor = divisor;
         }
 
+        public bool IsAbsolute() => true;
+
         public double SampleAt(double x)
         {
             if (x == 0) return (double)_values[0] / _divisor;

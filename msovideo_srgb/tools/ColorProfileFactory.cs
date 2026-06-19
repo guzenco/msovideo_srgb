@@ -43,9 +43,9 @@ namespace msovideo_srgb
             profileGenerator.AddTag("bTRC", tagDataB);
         }
 
-        private static Matrix OptimizeMatrix(Matrix matrixCSC, Func<int, int, double, double> sampleAt)
+        private static Matrix OptimizeMatrix(Matrix matrixCSC, Func<int, double, double> sampleAt)
         {
-            ToneCurve srgbCurve = new SrgbEOTF(0);
+            ToneCurve srgbCurve = new SrgbEOTF();
 
             Matrix white = Colorimetry.RGBToXYZ(Colorimetry.D65);
             Matrix white3x3 = Matrix.FromDiagonal(white);
@@ -65,7 +65,7 @@ namespace msovideo_srgb
 
                 result = result.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
 
-                result = result.Map((r, c, x) => sampleAt(r, c, srgbCurve.SampleInverseAt(x)));
+                result = result.Map((r, c, x) => sampleAt(r, srgbCurve.SampleInverseAt(x)));
 
                 result = Matrix.FromDiagonal(result * white).Inverse() * white3x3 * result;
 
@@ -93,7 +93,7 @@ namespace msovideo_srgb
             profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(Colorimetry.D65)));
             AddMatrix(profileGenerator, Colorimetry.sRGB);
 
-            ToneCurve gamaCurve = new SrgbEOTF(0);
+            ToneCurve gamaCurve = new SrgbEOTF();
             AddCurve(profileGenerator, gamaCurve, resolution);
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(80));
@@ -146,7 +146,10 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, EDID edid, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB)
+        public static void CreateProfile(string profileName, uint resolution, EDID edid, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, 
+            bool reportWhiteD65 = false, 
+            bool reportColorSpaceSRGB = false, 
+            bool reportGammaSRGB = false)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -216,7 +219,7 @@ namespace msovideo_srgb
             AddMatrix(profileGenerator, reportedColorSpace);
 
             ToneCurve gamaCurve = new GammaToneCurve(edidGamma);
-            ToneCurve reportedCurve = reportGammaSRGB ? new SrgbEOTF(0) : gamaCurve;
+            ToneCurve reportedCurve = reportGammaSRGB ? new SrgbEOTF() : gamaCurve;
             AddCurve(profileGenerator, reportedCurve, resolution);
 
             double[][] luts = new double[][] {
@@ -234,7 +237,15 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, double luminance, bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB, bool useVcgt, bool optimizeMatrix, bool acmMode, ToneCurve curve = null, ToneCurve gamma = null)
+        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, double luminance, 
+            bool reportWhiteD65 = false,
+            bool reportColorSpaceSRGB = false,
+            bool reportGammaSRGB = false, 
+            bool useVcgt = false, 
+            bool optimizeMatrix = false, 
+            bool acmMode = false, 
+            ToneCurve gamma = null, 
+            ToneCurve curve = null)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -253,9 +264,9 @@ namespace msovideo_srgb
                 if (gamma == null && !useVcgt && profile.vcgt != null)
                 {
                     Matrix profileMatrixWhite = Matrix.FromDiagonal(new double[] {
-                        profile.TrcSample(0, Math.Pow(profile.vcgt[0].SampleAt(1), 2)),
-                        profile.TrcSample(1, Math.Pow(profile.vcgt[1].SampleAt(1), 2)),
-                        profile.TrcSample(2, Math.Pow(profile.vcgt[2].SampleAt(1), 2))
+                        profile.TrcSample(0, profile.vcgt[0].SampleAt(1), true, Matrix.FromDiagonal(Matrix.One3x1())),
+                        profile.TrcSample(1, profile.vcgt[1].SampleAt(1), true, Matrix.FromDiagonal(Matrix.One3x1())),
+                        profile.TrcSample(2, profile.vcgt[2].SampleAt(1), true, Matrix.FromDiagonal(Matrix.One3x1()))
                     });
                     targetWhite = Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint) * profileMatrixWhite.Inverse() * Matrix.One3x1();
                 }
@@ -297,13 +308,14 @@ namespace msovideo_srgb
                 Matrix matrixOptimization;
                 Matrix matrixToOpt = acmMode ? Colorimetry.CreateMatrix(profile.matrix, Colorimetry.sRGB) : matrixCSC;
 
-                if (curve != null)
+                if (gamma != null)
                 {
-                    matrixOptimization = OptimizeMatrix(matrixToOpt, (r, c, x) => curve.SampleAt(x));
+                    ToneCurve scaledGamma = new ScaledToneCurve(gamma);
+                    matrixOptimization = OptimizeMatrix(matrixToOpt, (i, x) => scaledGamma.SampleAt(x));
                 }
                 else
                 {
-                    matrixOptimization = OptimizeMatrix(matrixToOpt, (r, c, x) => (profile.TrcSample(r, x, !useVcgt, matrixWhite) - profile.TrcSample(r, 0, !useVcgt)) / (1 - profile.TrcSample(r, 0, !useVcgt)));
+                    matrixOptimization = OptimizeMatrix(matrixToOpt, (i, x) => (new ScaledToneCurve(sampleAt: (v) => profile.TrcSample(i, v, !useVcgt, matrixWhite)).SampleAt(x)));
                 }
 
                 matrixCSC = matrixCSC * matrixOptimization;
@@ -312,7 +324,8 @@ namespace msovideo_srgb
             Matrix reportedColorSpace = reportColorSpaceSRGB ? Colorimetry.RGBToPCSXYZ(Colorimetry.sRGB) : finalColorSpace;
             AddMatrix(profileGenerator, reportedColorSpace);
 
-            ToneCurve reportedCurve = reportGammaSRGB ? new SrgbEOTF(0) : curve;
+            ToneCurve reportedCurve = curve != null ? curve : gamma;
+            reportedCurve = reportGammaSRGB ? new SrgbEOTF() : reportedCurve;
             if (reportedCurve != null)
             {
                 AddCurve(profileGenerator, reportedCurve, resolution);
@@ -328,27 +341,26 @@ namespace msovideo_srgb
             {
                 luts = new double[3][];
 
-                Func<int, double, double> gammaSampleAt;
-                if (gamma != null)
-                {
-                    gammaSampleAt = (i, value) => gamma.SampleAt(value);
-                }
-                else
-                {
-                    gammaSampleAt = (i, value) => profile.TrcSample(i, value, !useVcgt, matrixWhite);
-                }
 
                 for (int i = 0; i < 3; i++)
                 {
                     luts[i] = new double[resolution];
-                    double black = gammaSampleAt(i, 0);
+
+                    ScaledToneCurve scaledGamma;
+                    if (gamma != null)
+                    {
+                        scaledGamma = new ScaledToneCurve(gamma, profile.trcBlack, matrixWhite[i, i]);
+                    }
+                    else
+                    {
+                        scaledGamma = new ScaledToneCurve(isAbsolute: true, sampleAt: (x) => profile.TrcSample(i, x, !useVcgt, matrixWhite), white: matrixWhite[i, i]);
+                    }
+
                     for (int j = 1; j < resolution; j++)
                     {
                         double value = j / (resolution - 1.0);
 
-                        value = gammaSampleAt(i, value);
-
-                        value = black + (value - black) * (matrixWhite[i, i] - black) / (1 - black);
+                        value = scaledGamma.SampleAt(value);
 
                         value = profile.TrcSampleInverse(i, value);
 
