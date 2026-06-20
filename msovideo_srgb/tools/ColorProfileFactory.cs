@@ -56,7 +56,7 @@ namespace msovideo_srgb
             target = target.Map(x => x > 0 ? x < 1 ? x : 1 : 0);
             target = Matrix.FromDiagonal(target * white).Inverse() * white3x3 * target;
 
-            Matrix identityMatrix = Matrix.FromDiagonal(Matrix.One3x1());
+            Matrix identityMatrix = Matrix.Identity();
             Matrix finalMatrixOptimization = identityMatrix;
 
             for (int i = 0; i < 10000; i++)
@@ -139,7 +139,7 @@ namespace msovideo_srgb
                     new double[] { 0, 1 }
                 };
 
-            Matrix matrix = Matrix.FromDiagonal(Matrix.One3x1());
+            Matrix matrix = Matrix.Identity();
 
             profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(cta.MinLuminance, cta.MaxLuminance, matrix, luts));
 
@@ -182,7 +182,7 @@ namespace msovideo_srgb
             }
 
             Matrix targetWhite;
-            Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
+            Matrix matrixWhite = Matrix.Identity();
             if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
             {
                 targetWhite = Colorimetry.RGBToXYZ(edidWhite);
@@ -190,9 +190,7 @@ namespace msovideo_srgb
             else
             {
                 targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
-                matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(Colorimetry.RGBToXYZ(edidColorSpace), Colorimetry.RGBToXYZ(edidWhite)).Inverse() * targetWhite);
-                double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
-                matrixWhite = Matrix.FromDiagonal(new double[] { matrixWhite[0, 0] / scale, matrixWhite[1, 1] / scale, matrixWhite[2, 2] / scale });
+                matrixWhite = Colorimetry.CreateWhiteMatrix(Colorimetry.RGBToXYZ(edidColorSpace), Colorimetry.RGBToXYZ(edidWhite), targetWhite);
             }
 
             Matrix reportedWhite = reportWhiteD65 ? Colorimetry.RGBToXYZ(Colorimetry.D65) : targetWhite;
@@ -204,7 +202,7 @@ namespace msovideo_srgb
             profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(reportedWhite));
 
             Colorimetry.ColorSpace finalColorSpace; 
-            Matrix matrixCsc = Matrix.FromDiagonal(Matrix.One3x1());
+            Matrix matrixCsc = Matrix.Identity();
             if (targetColorSpace.Equals(Colorimetry.Native))
             {
                 finalColorSpace = edidColorSpace;
@@ -258,15 +256,15 @@ namespace msovideo_srgb
             }
 
             Matrix targetWhite;
-            Matrix matrixWhite = Matrix.FromDiagonal(Matrix.One3x1());
+            Matrix matrixWhite = Matrix.Identity();
             if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
             {
                 if (gamma == null && !useVcgt && profile.vcgt != null)
                 {
                     Matrix profileMatrixWhite = Matrix.FromDiagonal(new double[] {
-                        profile.TrcSample(0, profile.vcgt[0].SampleAt(1), true, Matrix.FromDiagonal(Matrix.One3x1())),
-                        profile.TrcSample(1, profile.vcgt[1].SampleAt(1), true, Matrix.FromDiagonal(Matrix.One3x1())),
-                        profile.TrcSample(2, profile.vcgt[2].SampleAt(1), true, Matrix.FromDiagonal(Matrix.One3x1()))
+                        profile.TrcSample(0, profile.vcgt[0].SampleAt(1), true, Matrix.Identity()),
+                        profile.TrcSample(1, profile.vcgt[1].SampleAt(1), true, Matrix.Identity()),
+                        profile.TrcSample(2, profile.vcgt[2].SampleAt(1), true, Matrix.Identity())
                     });
                     targetWhite = Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint) * profileMatrixWhite.Inverse() * Matrix.One3x1();
                 }
@@ -278,12 +276,11 @@ namespace msovideo_srgb
             else
             {
                 targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
-                matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * targetWhite);
-                matrixWhite /= matrixWhite.Max();
+                matrixWhite = Colorimetry.CreateWhiteMatrix(profile.matrix, profile.whitePoint, targetWhite);
             }
 
-            double whiteLuminance = profile.luminance * (profile.matrix * (matrixWhite * Matrix.One3x1()))[1];
-            matrixWhite *= Math.Min(luminance, whiteLuminance) / whiteLuminance;
+            double currentLuminance = profile.Luminance(matrixWhite, gamma);
+            matrixWhite *= Math.Min(luminance, currentLuminance) / currentLuminance;
 
             Matrix reportWhite = reportWhiteD65 ? Colorimetry.RGBToXYZ(Colorimetry.D65) : targetWhite;
 
@@ -294,7 +291,7 @@ namespace msovideo_srgb
             profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(reportWhite));
 
             Matrix finalColorSpace;
-            Matrix matrixCSC = Matrix.FromDiagonal(Matrix.One3x1());
+            Matrix matrixCSC = Matrix.Identity();
             if (targetColorSpace.Equals(Colorimetry.Native))
             {
                 finalColorSpace = profile.matrix;

@@ -73,6 +73,17 @@ namespace msovideo_srgb
             return black + (sample - black) * (1 - black) / (white - black);
         }
 
+        public double Luminance(Matrix matrix, ToneCurve gamma = null)
+        {
+            Matrix scale = Matrix.One3x1();
+            if (gamma != null)
+            {
+                gamma = new ScaledToneCurve(gamma, black: trcBlack);
+                scale *= gamma.SampleAt(1);
+            }
+            return luminance * (this.matrix * matrix * scale)[1];
+        }
+
         private ICCMatrixProfile()
         {
         }

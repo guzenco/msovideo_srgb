@@ -210,14 +210,13 @@ namespace msovideo_srgb
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePath);
 
-                double luminance = profile.luminance;
+                Matrix matrixWhite = Matrix.Identity();
                 if (!TargetWhitePoint.Equals(Colorimetry.NativeWhite))
                 {
-                    var matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * Colorimetry.RGBToXYZ(TargetWhitePoint));
-                    matrixWhite /= matrixWhite.Max();
-                    luminance *= (profile.matrix * (matrixWhite * Matrix.One3x1()))[1];
+                    matrixWhite = Colorimetry.CreateWhiteMatrix(profile.matrix, profile.whitePoint, TargetWhitePoint);
                 }
 
+                double luminance = profile.Luminance(matrixWhite);
                 if (LimitLuminance)
                 {
                     luminance = Math.Min(luminance, MaxLuminance);
@@ -268,34 +267,20 @@ namespace msovideo_srgb
             {
                 var profile = ICCMatrixProfile.FromFile(ProfilePathHDR);
 
-                double luminance = profile.luminance;
+                
+                Matrix matrixWhite = Matrix.Identity();
                 if (!TargetWhitePointHDR.Equals(Colorimetry.NativeWhite))
                 {
-                    var matrixWhite = Matrix.FromDiagonal(Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint).Inverse() * Colorimetry.RGBToXYZ(TargetWhitePointHDR));
-                    double scale = Math.Max(Math.Max(matrixWhite[0, 0], matrixWhite[1, 1]), matrixWhite[2, 2]);
-                    Matrix newWhiteLumi = Matrix.FromValues(new[,]
-                    {
-                        { matrixWhite[0,0] / scale },
-                        { matrixWhite[1,1] / scale },
-                        { matrixWhite[2,2] / scale }
-                    });
-                    luminance *= (profile.matrix * newWhiteLumi)[1];
+                    matrixWhite = Colorimetry.CreateWhiteMatrix(profile.matrix, profile.whitePoint, TargetWhitePointHDR);
                 }
+
+                double luminance = profile.Luminance(matrixWhite);
 
                 ToneCurve gamma = null;
                 if (CalibrateGammaHDR)
                 {
-
                     gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, luminance, BPCThreshold);
-
-                    Matrix newTrcLumi = Matrix.FromValues(new[,]
-                    {
-                        { gamma.SampleAt(1) },
-                        { gamma.SampleAt(1) },
-                        { gamma.SampleAt(1) }
-                    });
-
-                    luminance *= (profile.matrix * newTrcLumi)[1];  
+                    luminance = profile.Luminance(matrixWhite, gamma);
                 }
 
                 ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, luminance,

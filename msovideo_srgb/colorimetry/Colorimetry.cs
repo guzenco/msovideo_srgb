@@ -216,5 +216,16 @@ namespace msovideo_srgb
         {
             return RGBToXYZ(target) * origin.Inverse() * WhiteToWhiteAdaptation(RGBToXYZ(D65), D50);
         }
+
+        public static Matrix CreateWhiteMatrix(Matrix origin, Matrix whitePoint, Matrix targetWhitePoint)
+        {
+            Matrix matrixWhite = Matrix.FromDiagonal(XYZScale(origin * WhiteToWhiteAdaptation(D50, whitePoint), whitePoint).Inverse() * targetWhitePoint);
+            return matrixWhite / matrixWhite.Max();
+        }
+
+        public static Matrix CreateWhiteMatrix(Matrix origin, Matrix whitePoint, Point targetWhitePoint)
+        {
+            return CreateWhiteMatrix(origin, whitePoint, RGBToXYZ(targetWhitePoint));
+        }
     }
 }

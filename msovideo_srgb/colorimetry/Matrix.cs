@@ -70,6 +70,11 @@ namespace msovideo_srgb
             return FromValues(new double[,] { { 1 }, { 1 }, { 1 } });
         }
 
+        public static Matrix Identity()
+        {
+            return FromValues(new double[,] { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } });
+        }
+
         public static Matrix FromDiagonal(double[] array)
         {
             if (array.Length != 3)
