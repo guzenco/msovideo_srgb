@@ -347,7 +347,9 @@ namespace msovideo_srgb
 
         public string Mode => HdrActive ? "HDR/ACM " : "SDR";
 
-        public bool CanClamp => (UseEdid && !EdidColorSpace.Equals(TargetColorSpace) || UseIcc && ProfilePath != "");
+        public bool CanClamp => IsUnique && ((UseEdid && !EdidColorSpace.Equals(TargetColorSpace)) || (UseIcc && ProfilePath != ""));
+
+        public bool IsUnique => DisplayColorProfileManager.IsDisplaySourceIdUnique(Path);
 
         public bool UseEdid
         {

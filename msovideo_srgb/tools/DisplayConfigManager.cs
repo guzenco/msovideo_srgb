@@ -28,20 +28,12 @@ namespace msovideo_srgb
 
         public static HashSet<string> GetHdrDisplayPaths()
         {
-            Action<int> check = (e) =>
-            {
-                if (e != 0)
-                {
-                    throw new Win32Exception(e);
-                }
-            };
-
-            check(GetDisplayConfigBufferSizes(QDC.QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount));
+            Check(GetDisplayConfigBufferSizes(QDC.QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount));
 
             var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
             var modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
 
-            check(QueryDisplayConfig(QDC.QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero));
+            Check(QueryDisplayConfig(QDC.QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero));
 
             var result = new HashSet<string>();
 
@@ -53,7 +45,7 @@ namespace msovideo_srgb
                 displayInfo.header.adapterId = path.targetInfo.adapterId;
                 displayInfo.header.id = path.targetInfo.id;
 
-                check(DisplayConfigGetDeviceInfo(ref displayInfo));
+                Check(DisplayConfigGetDeviceInfo(ref displayInfo));
 
                 var colorInfo = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO();
                 colorInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
@@ -61,7 +53,7 @@ namespace msovideo_srgb
                 colorInfo.header.adapterId = path.targetInfo.adapterId;
                 colorInfo.header.id = path.targetInfo.id;
 
-                check(DisplayConfigGetDeviceInfo(ref colorInfo));
+                Check(DisplayConfigGetDeviceInfo(ref colorInfo));
 
                 if (colorInfo.advancedColorEnabled)
                 {
@@ -70,6 +62,42 @@ namespace msovideo_srgb
             });
 
             return result;
+        }
+
+        internal static Dictionary<string, Tuple<LUID, uint>> FindAdapterAndSourceIds()
+        {
+            Check(GetDisplayConfigBufferSizes(QDC.QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount));
+
+            var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
+            var modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
+
+            Check(QueryDisplayConfig(QDC.QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero));
+
+            var map = new Dictionary<string, Tuple<LUID, uint>>();
+            foreach (var path in paths)
+            {
+                var source = path.sourceInfo;
+                var target = path.targetInfo;
+
+                var targetName = new DISPLAYCONFIG_TARGET_DEVICE_NAME();
+                targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+                targetName.header.size = Marshal.SizeOf(typeof(DISPLAYCONFIG_TARGET_DEVICE_NAME));
+                targetName.header.adapterId = target.adapterId;
+                targetName.header.id = target.id;
+
+                Check(DisplayConfigGetDeviceInfo(ref targetName));
+                map.Add(targetName.monitorDevicePath, Tuple.Create(source.adapterId, source.id));
+            }
+
+            return map;
+        }
+
+        private static void Check(int e)
+        {
+            if (e != 0)
+            {
+                throw new Win32Exception(e);
+            }
         }
     }
 

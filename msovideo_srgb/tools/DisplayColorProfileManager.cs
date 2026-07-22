@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using WindowsDisplayAPI;
 
@@ -35,8 +36,6 @@ namespace msovideo_srgb
             CPST_STANDARD_DISPLAY_COLOR_MODE = 7,
             CPST_EXTENDED_DISPLAY_COLOR_MODE = 8
         }
-
-        private const uint QDC_ONLY_ACTIVE_PATHS = 0x00000002;
 
         [DllImport("user32.dll")]
         private static extern int GetDisplayConfigBufferSizes(
@@ -210,38 +209,27 @@ namespace msovideo_srgb
             );
         }
 
-        private static Tuple<LUID, uint> FindAdapterAndSource(string devicePath)
+        public static bool IsDisplaySourceIdUnique(string devicePath)
         {
-            GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, out uint numPaths, out uint numModes);
+            var map = DisplayConfigManager.FindAdapterAndSourceIds();
 
-            var paths = new DISPLAYCONFIG_PATH_INFO[numPaths];
-            var modes = new DISPLAYCONFIG_MODE_INFO[numModes];
-
-            QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, ref numPaths, paths, ref numModes, modes, IntPtr.Zero);
-
-            foreach (var path in paths)
+            if (map.ContainsKey(devicePath))
             {
-                var source = path.sourceInfo;
-                var target = path.targetInfo;
+                var adapterAndSource = map[devicePath];
+                var counts = map.Values.GroupBy(v => v).ToDictionary(g => g.Key, g => g.Count());
+                return counts[adapterAndSource] == 1;
+            }
 
-                var targetName = new DISPLAYCONFIG_TARGET_DEVICE_NAME
-                {
-                    header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
-                    {
-                        type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME,
-                        size = Marshal.SizeOf(typeof(DISPLAYCONFIG_TARGET_DEVICE_NAME)),
-                        adapterId = target.adapterId,
-                        id = target.id
-                    }
-                };
-               
-                if (DisplayConfigGetDeviceInfo(ref targetName) == 0)
-                {
-                    if (string.Equals(targetName.monitorDevicePath, devicePath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return Tuple.Create(source.adapterId, source.id);
-                    }
-                }
+            return false;
+        }
+
+        internal static Tuple<LUID, uint> FindAdapterAndSource(string devicePath)
+        {
+            var map = DisplayConfigManager.FindAdapterAndSourceIds();
+
+            if (map.ContainsKey(devicePath))
+            { 
+                return map[devicePath];
             }
 
             throw new DisplayNotFoundException("Display not found in DisplayConfig enumeration.");
