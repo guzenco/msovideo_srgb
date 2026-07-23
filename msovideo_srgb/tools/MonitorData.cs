@@ -190,29 +190,37 @@ namespace msovideo_srgb
 
         private void RemoveWrongProfileAssociations()
         {
-            var profileNames = DisplayColorProfileManager.GetDisplayProfiles(Display);
+            var profiles = ICCProfileGenerator.GetGeneratedProfiles();
 
-            foreach (string profileName in profileNames)
+            string profileNameSDR = DisplayColorProfileManager.GetProfile(Display, false);
+            if (profiles.Contains(profileNameSDR))
+            {
+                profiles.Remove(profileNameSDR);
+            }
+
+            string profileNameHDR = DisplayColorProfileManager.GetProfile(Display, true);
+            if (profiles.Contains(profileNameHDR))
+            {
+                profiles.Remove(profileNameHDR);
+            }
+
+            foreach (string profileName in profiles)
             {
                 if (!Regex.IsMatch(profileName, MHCProfileNamePattern)) continue;
                 if (profileName == MHCProfileNameSDR || profileName == MHCProfileNameHDR || profileName == MHCProfileNameDefaultHDR) continue;
-                if (!ICCProfileGenerator.IsGeneratedByThis(profileName)) continue;
 
                 DisplayColorProfileManager.RemoveAssociation(Display, profileName, false);
                 DisplayColorProfileManager.RemoveAssociation(Display, profileName, true);
             }
-        }
 
-        private void UnapplyProfiles(bool hdr, bool force)
-        {
-            while (true)
+            if (Regex.IsMatch(profileNameSDR, MHCProfileNamePattern) && profileNameSDR != MHCProfileNameSDR)
             {
-                string profileName = DisplayColorProfileManager.GetProfile(Display, hdr);
-                if (profileName == null) return;
-                if (!Regex.IsMatch(profileName, MHCProfileNamePattern)) return;
-                if (!ICCProfileGenerator.IsGeneratedByThis(profileName)) return;
-                
-                UnapplyProfile(profileName, hdr, force);
+                UnapplyProfile(profileNameSDR, false, true);
+            }
+
+            if (Regex.IsMatch(profileNameHDR, MHCProfileNamePattern) && profileNameHDR != MHCProfileNameHDR && profileNameHDR != MHCProfileNameDefaultHDR)
+            {
+                UnapplyProfile(profileNameHDR, true, true);
             }
         }
 
@@ -227,19 +235,8 @@ namespace msovideo_srgb
             RemoveWrongProfileAssociations();
             if (_clamped || !doClamp)
             {
-                UnapplyProfiles(false, !doClamp || !(UseEdid || UseIcc));
-                UnapplyProfiles(true, !doClamp || !UseIccHDR);
-            }
-            else
-            {
-                if(!(UseEdid || UseIcc))
-                {
-                    UnapplyProfiles(false, true);
-                }
-                if (!UseIccHDR)
-                {
-                    UnapplyProfiles(true, true);
-                }
+                UnapplyProfile(MHCProfileNameSDR, false, !doClamp || !(UseEdid || UseIcc));
+                UnapplyProfile(MHCProfileNameHDR, true, !doClamp || !UseIccHDR);
             }
             
             if (!doClamp) return;

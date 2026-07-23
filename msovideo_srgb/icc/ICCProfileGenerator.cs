@@ -391,5 +391,20 @@ namespace msovideo_srgb
 
             return false;
         }
+
+        public static List<string> GetGeneratedProfiles()
+        {
+            string[] profiles = Directory.GetFiles(profiles_path, "*.icm");
+
+            List<string> generatedProfiles = new List<string>();
+
+            foreach (string profileName in profiles)
+            {
+                if (!IsGeneratedByThis(profileName)) continue;
+                generatedProfiles.Add(profileName);
+            }
+
+            return generatedProfiles;
+        }
     }
 }

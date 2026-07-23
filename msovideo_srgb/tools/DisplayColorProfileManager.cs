@@ -107,14 +107,6 @@ namespace msovideo_srgb
             [MarshalAs(UnmanagedType.Bool)] bool usePerUserProfiles);
 
         [DllImport("mscms.dll", CharSet = CharSet.Unicode)]
-        private static extern int ColorProfileGetDisplayList(
-            WcsProfileManagementScope scope,
-            LUID targetAdapterID,
-            uint sourceID,
-            out IntPtr profileList,
-            out uint profileCount);
-
-        [DllImport("mscms.dll", CharSet = CharSet.Unicode)]
         private static extern int ColorProfileGetDeviceCapabilities(
             WcsProfileManagementScope scope,
             LUID targetAdapterID,
@@ -228,46 +220,6 @@ namespace msovideo_srgb
                 CLASS_MONITOR,
                 usePerUserProfiles == WcsProfileManagementScope.CurrentUser
             );
-        }
-
-        public static string[] GetDisplayProfiles(Display display)
-        {
-            var luidAndSource = FindAdapterAndSource(display.DevicePath);
-
-            IntPtr profileListPtr;
-            uint profileCount;
-            int hr = ColorProfileGetDisplayList(
-                WcsProfileManagementScope.CurrentUser,
-                luidAndSource.Item1,
-                luidAndSource.Item2,
-                out profileListPtr,
-                out profileCount);
-
-            if (hr != 0)
-            {
-                Marshal.ThrowExceptionForHR(hr);
-            }
-
-            var profileNames = new string[profileCount];
-            try
-            {
-                if (profileCount > 0) {
-                    IntPtr[] ptrs = new IntPtr[profileCount];
-                    Marshal.Copy(profileListPtr, ptrs, 0, (int)profileCount);
-
-                    for (int i = 0; i < profileCount; i++)
-                    {
-                        string profileName = Marshal.PtrToStringUni(ptrs[i]);
-                        profileNames[i] = profileName;
-                    }
-                }
-            }
-            finally
-            {
-                LocalFree(profileListPtr);
-            }
-            
-            return profileNames;
         }
 
         public static bool IsSupportMHC2(Display display)
