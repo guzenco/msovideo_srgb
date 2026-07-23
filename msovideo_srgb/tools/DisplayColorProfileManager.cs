@@ -37,24 +37,8 @@ namespace msovideo_srgb
             CPST_EXTENDED_DISPLAY_COLOR_MODE = 8
         }
 
-        [DllImport("user32.dll")]
-        private static extern int GetDisplayConfigBufferSizes(
-            uint flags,
-            out uint numPathArrayElements,
-            out uint numModeInfoArrayElements);
-
-        [DllImport("user32.dll")]
-        private static extern int QueryDisplayConfig(
-            uint flags,
-            ref uint numPathArrayElements,
-            [Out] DISPLAYCONFIG_PATH_INFO[] pathArray,
-            ref uint numModeInfoArrayElements,
-            [Out] DISPLAYCONFIG_MODE_INFO[] modeInfoArray,
-            IntPtr currentTopologyId);
-
-        [DllImport("user32.dll")]
-        private static extern int DisplayConfigGetDeviceInfo(
-            ref DISPLAYCONFIG_TARGET_DEVICE_NAME deviceName);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr LocalFree(IntPtr hMem);
 
         [DllImport("mscms.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern int ColorProfileAddDisplayAssociation(
@@ -100,10 +84,18 @@ namespace msovideo_srgb
 
         [DllImport("mscms.dll", CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool WcsSetUsePerUserProfiles(
+        private static extern bool WcsSetUsePerUserProfiles(
             string pDeviceName,
             uint dwDeviceClass,
             [MarshalAs(UnmanagedType.Bool)] bool usePerUserProfiles);
+
+        [DllImport("mscms.dll", CharSet = CharSet.Unicode)]
+        private static extern int ColorProfileGetDisplayList(
+            WcsProfileManagementScope scope,
+            LUID targetAdapterID,
+            uint sourceID,
+            out IntPtr profileList,
+            out uint profileCount);
 
         public static void AddAssociation(Display display, string profileName, bool hdr)
         {
@@ -128,8 +120,6 @@ namespace msovideo_srgb
                 luidAndSource.Item1,
                 luidAndSource.Item2,
                 hdr);
-
-            if (hr != 0) Marshal.ThrowExceptionForHR(hr);
         }
         public static string GetProfile(Display display, bool hdr)
         {
@@ -144,24 +134,29 @@ namespace msovideo_srgb
                 hdr ? COLORPROFILESUBTYPE.CPST_EXTENDED_DISPLAY_COLOR_MODE : COLORPROFILESUBTYPE.CPST_STANDARD_DISPLAY_COLOR_MODE,
                 out profileNamePtr);
 
-            if (Marshal.GetExceptionForHR(hr) is FileNotFoundException)
-            {
-                return "";
-            }
-
             if (hr != 0)
             {
+                if (Marshal.GetExceptionForHR(hr) is FileNotFoundException)
+                {
+                    return "";
+                }
+
                 Marshal.ThrowExceptionForHR(hr);
             }
 
-            string profileName = null;
-            if (profileNamePtr != IntPtr.Zero)
+            try
             {
-                profileName = Marshal.PtrToStringUni(profileNamePtr);
-                Marshal.FreeCoTaskMem(profileNamePtr);
+                string profileName = null;
+                if (profileNamePtr != IntPtr.Zero)
+                {
+                    profileName = Marshal.PtrToStringUni(profileNamePtr);
+                }
+                return profileName;
             }
-
-            return profileName;
+            finally
+            {
+                LocalFree(profileNamePtr);
+            }
         }
 
         public static void SetProfile(Display display, string profilePath, bool hdr)
@@ -209,14 +204,54 @@ namespace msovideo_srgb
             );
         }
 
-        public static bool IsDisplaySourceIdUnique(string devicePath)
+        public static string[] GetDisplayProfiles(Display display)
         {
-            var map = DisplayConfigManager.FindAdapterAndSourceIds();
+            var luidAndSource = FindAdapterAndSource(display.DevicePath);
 
-            if (map.ContainsKey(devicePath))
+            IntPtr profileListPtr;
+            uint profileCount;
+            int hr = ColorProfileGetDisplayList(
+                WcsProfileManagementScope.CurrentUser,
+                luidAndSource.Item1,
+                luidAndSource.Item2,
+                out profileListPtr,
+                out profileCount);
+
+            if (hr != 0)
             {
-                var adapterAndSource = map[devicePath];
-                var counts = map.Values.GroupBy(v => v).ToDictionary(g => g.Key, g => g.Count());
+                Marshal.ThrowExceptionForHR(hr);
+            }
+
+            var profileNames = new string[profileCount];
+            try
+            {
+                if (profileCount > 0) {
+                    IntPtr[] ptrs = new IntPtr[profileCount];
+                    Marshal.Copy(profileListPtr, ptrs, 0, (int)profileCount);
+
+                    for (int i = 0; i < profileCount; i++)
+                    {
+                        string profileName = Marshal.PtrToStringUni(ptrs[i]);
+                        profileNames[i] = profileName;
+                    }
+                }
+            }
+            finally
+            {
+                LocalFree(profileListPtr);
+            }
+            
+            return profileNames;
+        }
+
+        public static bool IsDisplaySourceIdUnique(Display display)
+        {
+            var adapterAndSourceIds = DisplayConfigManager.FindAdapterAndSourceIds();
+
+            if (adapterAndSourceIds.ContainsKey(display.DevicePath))
+            {
+                var adapterAndSource = adapterAndSourceIds[display.DevicePath];
+                var counts = adapterAndSourceIds.Values.GroupBy(v => v).ToDictionary(g => g.Key, g => g.Count());
                 return counts[adapterAndSource] == 1;
             }
 
@@ -225,11 +260,11 @@ namespace msovideo_srgb
 
         internal static Tuple<LUID, uint> FindAdapterAndSource(string devicePath)
         {
-            var map = DisplayConfigManager.FindAdapterAndSourceIds();
+            var adapterAndSourceIds = DisplayConfigManager.FindAdapterAndSourceIds();
 
-            if (map.ContainsKey(devicePath))
+            if (adapterAndSourceIds.ContainsKey(devicePath))
             { 
-                return map[devicePath];
+                return adapterAndSourceIds[devicePath];
             }
 
             throw new DisplayNotFoundException("Display not found in DisplayConfig enumeration.");

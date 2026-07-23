@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Windows;
 using EDIDParser.Descriptors;
 using EDIDParser.Enums;
@@ -130,6 +131,8 @@ namespace msovideo_srgb
 
         public const string MHCProfileNameReset = "msovideo_srgb_no_transform.icm";
 
+        public const string MHCProfileNamePattern = @"^\[(?:SDR|HDR)\]\s.+#[^\s]+(?:\.icm| default\.icm)$";
+        
         private void ApplyProfile(string profileName, bool hdr)
         {
             ColorProfileFactory.CreateProfile(MHCProfileNameReset, CurveResolution);
@@ -181,7 +184,35 @@ namespace msovideo_srgb
                         DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameDefaultHDR, true);
                     }
                 }
+
+            }
+        }
+
+        private void RemoveWrongProfileAssociations()
+        {
+            var profileNames = DisplayColorProfileManager.GetDisplayProfiles(Display);
+
+            foreach (string profileName in profileNames)
+            {
+                if (!Regex.IsMatch(profileName, MHCProfileNamePattern)) continue;
+                if (profileName == MHCProfileNameSDR || profileName == MHCProfileNameHDR || profileName == MHCProfileNameDefaultHDR) continue;
+                if (!ICCProfileGenerator.IsGeneratedByThis(profileName)) continue;
+
+                DisplayColorProfileManager.RemoveAssociation(Display, profileName, false);
+                DisplayColorProfileManager.RemoveAssociation(Display, profileName, true);
+            }
+        }
+
+        private void UnapplyProfiles(bool hdr, bool force)
+        {
+            while (true)
+            {
+                string profileName = DisplayColorProfileManager.GetProfile(Display, hdr);
+                if (profileName == null) return;
+                if (!Regex.IsMatch(profileName, MHCProfileNamePattern)) return;
+                if (!ICCProfileGenerator.IsGeneratedByThis(profileName)) return;
                 
+                UnapplyProfile(profileName, hdr, force);
             }
         }
 
@@ -193,12 +224,24 @@ namespace msovideo_srgb
                 DisplayColorProfileManager.SetDisplayUserScope(Display, DisplayColorProfileManager.WcsProfileManagementScope.CurrentUser);
             }
 
-            if (_clamped)
+            RemoveWrongProfileAssociations();
+            if (_clamped || !doClamp)
             {
-                UnapplyProfile(MHCProfileNameSDR, false, !doClamp);
-                UnapplyProfile(MHCProfileNameHDR, true, !doClamp);
+                UnapplyProfiles(false, !doClamp || !(UseEdid || UseIcc));
+                UnapplyProfiles(true, !doClamp || !UseIccHDR);
             }
-
+            else
+            {
+                if(!(UseEdid || UseIcc))
+                {
+                    UnapplyProfiles(false, true);
+                }
+                if (!UseIccHDR)
+                {
+                    UnapplyProfiles(true, true);
+                }
+            }
+            
             if (!doClamp) return;
 
             if (UseEdid)
@@ -349,7 +392,7 @@ namespace msovideo_srgb
 
         public bool CanClamp => IsUnique && ((UseEdid && !EdidColorSpace.Equals(TargetColorSpace)) || (UseIcc && ProfilePath != ""));
 
-        public bool IsUnique => DisplayColorProfileManager.IsDisplaySourceIdUnique(Path);
+        public bool IsUnique => DisplayColorProfileManager.IsDisplaySourceIdUnique(Display);
 
         public bool UseEdid
         {

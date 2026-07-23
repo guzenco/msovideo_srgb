@@ -19,6 +19,7 @@ namespace msovideo_srgb
         private ushort version = 0x0220;
         private uint manufacturerID = 0;
         private uint deviceModel = 0;
+        private const string creator = "msov";
 
         public void AddTag(string signature, byte[] data)
         {
@@ -68,7 +69,7 @@ namespace msovideo_srgb
             WriteS15Fixed16BE(header, 72, 1.0);
             WriteS15Fixed16BE(header, 76, 0.8249);
 
-            WriteAscii(header, 80, "msov");
+            WriteAscii(header, 80, creator);
 
             int tagCount = tags.Count;
             int tagTableSize = 4 + tagCount * 12;
@@ -365,6 +366,30 @@ namespace msovideo_srgb
             }
 
             File.WriteAllBytes(path, profileData);
+        }
+
+        public static bool IsGeneratedByThis(string profileName)
+        {
+            string path = Path.Combine(profiles_path, profileName);
+
+            if (File.Exists(path))
+            {
+                using (FileStream reader = File.OpenRead(path))
+                {
+                    byte[] buffer = new byte[4];
+                    
+                    reader.Seek(80, SeekOrigin.Begin);  
+                    int size = reader.Read(buffer, 0, 4);
+
+                    if (size != 4) return false;
+
+                    string profileCreator = Encoding.ASCII.GetString(buffer);
+
+                    return profileCreator.Equals(creator);
+                } 
+            }
+
+            return false;
         }
     }
 }

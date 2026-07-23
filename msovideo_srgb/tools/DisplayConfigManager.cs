@@ -37,7 +37,7 @@ namespace msovideo_srgb
 
             var result = new HashSet<string>();
 
-            Array.ForEach(paths, path =>
+            foreach (var path in paths)
             {
                 var displayInfo = new DISPLAYCONFIG_TARGET_DEVICE_NAME();
                 displayInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
@@ -59,7 +59,7 @@ namespace msovideo_srgb
                 {
                     result.Add(displayInfo.monitorDevicePath);
                 }
-            });
+            }
 
             return result;
         }
