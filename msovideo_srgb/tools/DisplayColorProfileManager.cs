@@ -57,6 +57,12 @@ namespace msovideo_srgb
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr LocalFree(IntPtr hMem);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr LoadLibrary(string lpFileName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+
         [DllImport("mscms.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern int ColorProfileAddDisplayAssociation(
             WcsProfileManagementScope scope,
@@ -106,14 +112,29 @@ namespace msovideo_srgb
             uint dwDeviceClass,
             [MarshalAs(UnmanagedType.Bool)] bool usePerUserProfiles);
 
-        [DllImport("mscms.dll", CharSet = CharSet.Unicode)]
-        private static extern int ColorProfileGetDeviceCapabilities(
+        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+        private delegate int ColorProfileGetDeviceCapabilitiesDelegate(
             WcsProfileManagementScope scope,
             LUID targetAdapterID,
             uint sourceID,
             WCS_DEVICE_CAPABILITIES_TYPE capsType,
-            ref WCS_DEVICE_MHC2_CAPABILITIES outputCapabilities 
+            ref WCS_DEVICE_MHC2_CAPABILITIES outputCapabilities
         );
+
+        private static readonly ColorProfileGetDeviceCapabilitiesDelegate ColorProfileGetDeviceCapabilities;
+
+        static DisplayColorProfileManager()
+        {
+            IntPtr hModule = LoadLibrary("mscms.dll");
+            if (hModule != IntPtr.Zero)
+            {
+                IntPtr proc = GetProcAddress(hModule, "ColorProfileGetDeviceCapabilities");
+                if (proc != IntPtr.Zero)
+                {
+                    ColorProfileGetDeviceCapabilities = (ColorProfileGetDeviceCapabilitiesDelegate)Marshal.GetDelegateForFunctionPointer(proc, typeof(ColorProfileGetDeviceCapabilitiesDelegate));
+                }
+            }
+        }
 
         public static void AddAssociation(Display display, string profileName, bool hdr)
         {
@@ -222,8 +243,13 @@ namespace msovideo_srgb
             );
         }
 
-        public static bool IsSupportMHC2(Display display)
+        public static bool? IsSupportMHC2(Display display)
         {
+            if (ColorProfileGetDeviceCapabilities == null)
+            {
+                return null;
+            }
+
             var luidAndSource = FindAdapterAndSource(display.DevicePath);
 
             var outputCapabilities = new WCS_DEVICE_MHC2_CAPABILITIES();
@@ -236,7 +262,7 @@ namespace msovideo_srgb
 
             if (hr != 0)
             {
-                return false;
+                Marshal.ThrowExceptionForHR(hr);
             }
 
             return outputCapabilities.SupportsMhc2;

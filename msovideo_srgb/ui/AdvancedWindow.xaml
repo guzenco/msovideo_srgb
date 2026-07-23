@@ -27,6 +27,7 @@
         <GroupBox Header="Calibration" Padding="6">
             <StackPanel>
                 <StackPanel Margin="0,0,0,6">
+                    <TextBlock TextWrapping="Wrap" Visibility="{Binding MHC2SupportUnknownWarning}" Foreground="Red">MHC2 support unknown</TextBlock>
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding MHC2NotSupportedWarning}" Foreground="Red">MHC2 not supported</TextBlock>
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding DuplicateDesktopWarning}" Foreground="Red">Duplicate desktop mode – cannot clamp</TextBlock>
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding EdidWarning}" Foreground="Red">Primaries match target – cannot clamp</TextBlock>

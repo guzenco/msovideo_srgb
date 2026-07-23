@@ -445,8 +445,12 @@ namespace msovideo_srgb
             get => _customWhiteHdrY;
         }
 
+        public Visibility MHC2SupportUnknownWarning =>
+            _monitor.IsSupportMHC2 == null
+            ? Visibility.Visible : Visibility.Collapsed;
+
         public Visibility MHC2NotSupportedWarning => 
-            !_monitor.IsSupportMHC2 
+            _monitor.IsSupportMHC2 == false 
             ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility DuplicateDesktopWarning =>
