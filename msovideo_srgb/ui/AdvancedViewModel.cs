@@ -445,9 +445,22 @@ namespace msovideo_srgb
             get => _customWhiteHdrY;
         }
 
-        public Visibility DuplicateDesktopWarning => !_monitor.IsUnique ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility HdrWarning => _monitor.HdrActive ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility MHC2NotSupportedWarning => 
+            !_monitor.IsSupportMHC2 
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        public Visibility DuplicateDesktopWarning =>
+            MHC2NotSupportedWarning != Visibility.Visible &&
+            !_monitor.IsUnique 
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        public Visibility HdrWarning =>
+            MHC2NotSupportedWarning != Visibility.Visible &&
+            _monitor.HdrActive 
+            ? Visibility.Visible : Visibility.Collapsed;
+
         public Visibility EdidWarning =>
+            MHC2NotSupportedWarning != Visibility.Visible &&
             DuplicateDesktopWarning != Visibility.Visible &&
             UseEdid && Colorimetry.ColorSpaces[_target].Equals(_monitor.EdidColorSpace)
             ? Visibility.Visible : Visibility.Collapsed;

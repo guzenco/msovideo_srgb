@@ -37,6 +37,23 @@ namespace msovideo_srgb
             CPST_EXTENDED_DISPLAY_COLOR_MODE = 8
         }
 
+        internal enum WCS_DEVICE_CAPABILITIES_TYPE: uint
+        {
+            VideoCardGammaTable = 1,
+            MicrosoftHardwareColorV2 = 2,
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct WCS_DEVICE_MHC2_CAPABILITIES
+        {
+            public uint Size;
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool SupportsMhc2;
+            public uint RegammaLutEntryCount;
+            public uint CscXyzMatrixRows;
+            public uint CscXyzMatrixColumns; 
+        }
+
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr LocalFree(IntPtr hMem);
 
@@ -96,6 +113,15 @@ namespace msovideo_srgb
             uint sourceID,
             out IntPtr profileList,
             out uint profileCount);
+
+        [DllImport("mscms.dll", CharSet = CharSet.Unicode)]
+        private static extern int ColorProfileGetDeviceCapabilities(
+            WcsProfileManagementScope scope,
+            LUID targetAdapterID,
+            uint sourceID,
+            WCS_DEVICE_CAPABILITIES_TYPE capsType,
+            ref WCS_DEVICE_MHC2_CAPABILITIES outputCapabilities 
+        );
 
         public static void AddAssociation(Display display, string profileName, bool hdr)
         {
@@ -242,6 +268,26 @@ namespace msovideo_srgb
             }
             
             return profileNames;
+        }
+
+        public static bool IsSupportMHC2(Display display)
+        {
+            var luidAndSource = FindAdapterAndSource(display.DevicePath);
+
+            var outputCapabilities = new WCS_DEVICE_MHC2_CAPABILITIES();
+            int hr = ColorProfileGetDeviceCapabilities(
+                WcsProfileManagementScope.CurrentUser,
+                luidAndSource.Item1,
+                luidAndSource.Item2,
+                WCS_DEVICE_CAPABILITIES_TYPE.MicrosoftHardwareColorV2,
+                ref outputCapabilities);
+
+            if (hr != 0)
+            {
+                return false;
+            }
+
+            return outputCapabilities.SupportsMhc2;
         }
 
         public static bool IsDisplaySourceIdUnique(Display display)
