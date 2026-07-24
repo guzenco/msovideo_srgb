@@ -197,17 +197,24 @@ namespace msovideo_srgb
             {
                 profiles.Remove(profileNameSDR);
             }
+            else
+            {
+                profileNameSDR = "";
+            }
 
             string profileNameHDR = DisplayColorProfileManager.GetProfile(Display, true);
             if (profiles.Contains(profileNameHDR))
             {
                 profiles.Remove(profileNameHDR);
             }
+            else
+            {
+                profileNameHDR = "";
+            }
 
             foreach (string profileName in profiles)
             {
                 if (!Regex.IsMatch(profileName, MHCProfileNamePattern)) continue;
-                if (profileName == MHCProfileNameSDR || profileName == MHCProfileNameHDR || profileName == MHCProfileNameDefaultHDR) continue;
 
                 DisplayColorProfileManager.RemoveAssociation(Display, profileName, false);
                 DisplayColorProfileManager.RemoveAssociation(Display, profileName, true);
@@ -237,6 +244,17 @@ namespace msovideo_srgb
             {
                 UnapplyProfile(MHCProfileNameSDR, false, !doClamp || !(UseEdid || UseIcc));
                 UnapplyProfile(MHCProfileNameHDR, true, !doClamp || !UseIccHDR);
+            }
+            else
+            {
+                if (!(UseEdid || UseIcc))
+                {
+                    UnapplyProfile(MHCProfileNameSDR, false, true);
+                }
+                if (!UseIccHDR)
+                {
+                    UnapplyProfile(MHCProfileNameHDR, true, true);
+                }
             }
             
             if (!doClamp) return;

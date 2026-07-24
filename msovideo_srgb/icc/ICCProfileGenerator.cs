@@ -398,8 +398,9 @@ namespace msovideo_srgb
 
             List<string> generatedProfiles = new List<string>();
 
-            foreach (string profileName in profiles)
+            foreach (string profile in profiles)
             {
+                string profileName = Path.GetFileName(profile);
                 if (!IsGeneratedByThis(profileName)) continue;
                 generatedProfiles.Add(profileName);
             }
