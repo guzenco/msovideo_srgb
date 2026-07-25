@@ -13,8 +13,6 @@ namespace msovideo_srgb
     {
         public ObservableCollection<MonitorData> Monitors { get; }
 
-        private string _configPath;
-
         private string _startupName;
         private RegistryKey _startupKey;
         private string _startupValue;
@@ -22,7 +20,6 @@ namespace msovideo_srgb
         public MainViewModel()
         {
             Monitors = new ObservableCollection<MonitorData>();
-            _configPath = AppDomain.CurrentDomain.BaseDirectory + "config.xml";
 
             _startupName = "msovideo_srgb";
             _startupKey = Registry.CurrentUser.OpenSubKey
@@ -66,11 +63,7 @@ namespace msovideo_srgb
         private void UpdateMonitors()
         {
             Monitors.Clear();
-            List<XElement> config = null;
-            if (File.Exists(_configPath))
-            {
-                config = XElement.Load(_configPath).Descendants("monitor").ToList();
-            }
+            Config.Load();
 
             var hdrPaths = DisplayConfigManager.GetHdrDisplayPaths();
 
@@ -80,44 +73,9 @@ namespace msovideo_srgb
                 var path = display.DevicePath;
 
                 var hdrActive = hdrPaths.Contains(path);
-
-                var settings = config?.FirstOrDefault(x => (string)x.Attribute("path") == path);
-                MonitorData monitor;
-                if (settings != null)
-                {
-                    monitor = new MonitorData(this, number++, display, path, hdrActive,
-                        (bool)settings.Attribute("clamp_sdr"),
-                        (bool)settings.Attribute("use_icc"),
-                        (string)settings.Attribute("icc_path"),
-                        (bool?)settings.Attribute("limit_luminance") ?? false,
-                        (int?)settings.Attribute("max_luminance") ?? 80,
-                        (bool)settings.Attribute("calibrate_gamma"),
-                        (int)settings.Attribute("selected_gamma"),
-                        (double)settings.Attribute("custom_gamma"),
-                        (double)settings.Attribute("custom_percentage"),
-                        (bool?)settings.Attribute("use_vcgt") ?? false,
-                        (bool?)settings.Attribute("optimize_matrix") ?? true,
-                        (int?)settings.Attribute("target_white") ?? 0,
-                        (double?)settings.Attribute("custom_white_x") ?? Colorimetry.D65.X,
-                        (double?)settings.Attribute("custom_white_y") ?? Colorimetry.D65.Y,
-                        (bool?)settings.Attribute("report_white_d65") ?? false,
-                        (bool?)settings.Attribute("report_color_space_srgb") ?? false,
-                        (bool?)settings.Attribute("report_gamma_srgb") ?? false,
-                        (int)settings.Attribute("target"),
-                        (int?)settings.Attribute("resolution") ?? 2,
-                        (bool?)settings.Attribute("use_icc_hdr") ?? false,
-                        (string)settings.Attribute("icc_path_hdr") ?? "",
-                        (bool?)settings.Attribute("calibrate_gamma_hdr") ?? false,
-                        (int?)settings.Attribute("target_peak") ?? 10000,
-                        (double?)settings.Attribute("bpc_threshold") ?? 80,
-                        (int?)settings.Attribute("target_white_hdr") ?? 0,
-                        (double?)settings.Attribute("custom_white_hdr_x") ?? Colorimetry.D65.X,
-                        (double?)settings.Attribute("custom_white_hdr_y") ?? Colorimetry.D65.Y);
-                }
-                else
-                {
-                    monitor = new MonitorData(this, number++, display, path, hdrActive, false);
-                }
+         
+                MonitorData monitor = new MonitorData(this, number++, display, path, hdrActive);
+                Config.LoadMonitorData(monitor);
 
                 Monitors.Add(monitor);
             }
@@ -153,59 +111,14 @@ namespace msovideo_srgb
         {
             try
             {
-                List<XElement> monitors = new List<XElement>();
-                if (File.Exists(_configPath))
-                {
-                    monitors = XElement.Load(_configPath).Descendants("monitor").ToList();
-                }
+                Config.Load();
 
                 foreach (var m in Monitors)
                 {
-                    XElement monitor = new XElement("monitor", 
-                            new XAttribute("path", m.Path),
-                            new XAttribute("clamp_sdr", m.ClampSdr),
-                            new XAttribute("use_icc", m.UseIcc),
-                            new XAttribute("icc_path", m.ProfilePath),
-                            new XAttribute("limit_luminance", m.LimitLuminance),
-                            new XAttribute("max_luminance", m.MaxLuminance),
-                            new XAttribute("calibrate_gamma", m.CalibrateGamma),
-                            new XAttribute("selected_gamma", m.SelectedGamma),
-                            new XAttribute("custom_gamma", m.CustomGamma),
-                            new XAttribute("custom_percentage", m.CustomPercentage),
-                            new XAttribute("use_vcgt", m.UseVcgt),
-                            new XAttribute("optimize_matrix", m.OptimizeMatrix),
-                            new XAttribute("target_white", m.TargetWhite),
-                            new XAttribute("custom_white_x", m.CustomWhiteX),
-                            new XAttribute("custom_white_y", m.CustomWhiteY),
-                            new XAttribute("report_white_d65", m.ReportWhiteD65),
-                            new XAttribute("report_color_space_srgb", m.ReportColorSpaceSRGB),
-                            new XAttribute("report_gamma_srgb", m.ReportGammaSRGB),
-                            new XAttribute("target", m.Target),
-                            new XAttribute("resolution", m.Resolution),
-                            new XAttribute("use_icc_hdr", m.UseIccHDR),
-                            new XAttribute("icc_path_hdr", m.ProfilePathHDR),
-                            new XAttribute("calibrate_gamma_hdr", m.CalibrateGammaHDR),
-                            new XAttribute("target_peak", m.TargetPeak),
-                            new XAttribute("bpc_threshold", m.BPCThreshold),
-                            new XAttribute("target_white_hdr", m.TargetWhiteHDR),
-                            new XAttribute("custom_white_hdr_x", m.CustomWhiteHdrX),
-                            new XAttribute("custom_white_hdr_y", m.CustomWhiteHdrY));
-
-                    var existing = monitors.FirstOrDefault(x => (string)x.Attribute("path") == m.Path);
-                    if (existing != null)
-                    {
-                        int index = monitors.IndexOf(existing);
-                        monitors[index] = monitor;
-                    }
-                    else
-                    {
-                        monitors.Add(monitor);
-                    }
+                    Config.SaveMonitorData(m);
                 }
 
-                var xElem = new XElement("monitors", monitors);
-
-                xElem.Save(_configPath);
+                Config.Save();
             }
             catch (Exception ex)
             {

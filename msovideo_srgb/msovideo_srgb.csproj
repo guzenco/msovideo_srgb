@@ -93,8 +93,10 @@
     </ApplicationDefinition>
     <Compile Include="colorimetry\ScaledToneCurve.cs" />
     <Compile Include="colorimetry\ST2084.cs" />
+    <Compile Include="common\Attributes.cs" />
     <Compile Include="icc\ICCProfileGenerator.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />
+    <Compile Include="common\Config.cs" />
     <Compile Include="tools\DisplayColorProfileManager.cs" />
     <Compile Include="tools\DisplayStateObserver.cs" />
     <Compile Include="tools\ExtendedEDID.cs" />
@@ -108,7 +110,7 @@
     <Compile Include="ui\RangeRule.cs" />
     <Compile Include="colorimetry\GammaToneCurve.cs" />
     <Compile Include="icc\ICCBinaryReader.cs" />
-    <Compile Include="tools\Exceptions.cs" />
+    <Compile Include="common\Exceptions.cs" />
     <Compile Include="colorimetry\SrgbEOTF.cs" />
     <Compile Include="colorimetry\ToneCurve.cs" />
     <Page Include="ui\AboutWindow.xaml" />
@@ -133,7 +135,7 @@
   <ItemGroup>
     <Compile Include="colorimetry\Matrix.cs" />
     <Compile Include="icc\ICCMatrixProfile.cs" />
-    <Compile Include="tools\MonitorData.cs" />
+    <Compile Include="common\MonitorData.cs" />
     <Compile Include="ui\AdvancedWindow.xaml.cs">
       <DependentUpon>AdvancedWindow.xaml</DependentUpon>
     </Compile>

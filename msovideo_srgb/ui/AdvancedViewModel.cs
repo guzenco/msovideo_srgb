@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using EDIDParser;
@@ -13,31 +14,82 @@ namespace msovideo_srgb
 
         private MonitorData _monitor;
 
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.Target))]
         private int _target;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.Resolution))]
         private int _resolution;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.UseIcc))]
         private bool _useIcc;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.ProfilePath))]
         private string _profilePath;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.LimitLuminance))]
         private bool _limitLuminance;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.MaxLuminance))]
         private int _maxLuminance;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CalibrateGamma))]
         private bool _calibrateGamma;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.SelectedGamma))]
         private int _selectedGamma;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomGamma))]
         private double _customGamma;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomPercentage))]
         private double _customPercentage;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.UseVcgt))]
         private bool _useVcgt;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.OptimizeMatrix))]
         private bool _optimizeMatrix;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.TargetWhite))]
         private int _targetWhite;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomWhiteX))]
         private double _customWhiteX;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomWhiteY))]
         private double _customWhiteY;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.ReportWhiteD65))]
         private bool _reportWhiteD65;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.ReportColorSpaceSRGB))]
         private bool _reportColorSpaceSRGB;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.ReportGammaSRGB))]
         private bool _reportGammaSRGB;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.UseIccHDR))]
         private bool _useIccHDR;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.ProfilePathHDR))]
         private string _profilePathHDR;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CalibrateGammaHDR))]
         private bool _calibrateGammaHDR;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.TargetPeak))]
         private int _targetPeak;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.BPCThreshold))]
         private double _bpcThreshold;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.TargetWhiteHDR))]
         private int _targetWhiteHDR;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomWhiteHdrX))]
         private double _customWhiteHdrX;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomWhiteHdrY))]
         private double _customWhiteHdrY;
 
         public AdvancedViewModel()
@@ -49,88 +101,32 @@ namespace msovideo_srgb
         {
             _monitor = monitor;
 
-            _target = monitor.Target;
-            _resolution = monitor.Resolution;
-            _useIcc = monitor.UseIcc;
-            _profilePath = monitor.ProfilePath;
-            _limitLuminance = monitor.LimitLuminance;
-            _maxLuminance = monitor.MaxLuminance;
-            _calibrateGamma = monitor.CalibrateGamma;
-            _selectedGamma = monitor.SelectedGamma;
-            _customGamma = monitor.CustomGamma;
-            _customPercentage = monitor.CustomPercentage;
-            _useVcgt = monitor.UseVcgt;
-            _optimizeMatrix = monitor.OptimizeMatrix;
-            _targetWhite = monitor.TargetWhite;
-            _customWhiteX = monitor.CustomWhiteX;
-            _customWhiteY = monitor.CustomWhiteY;
-            _reportWhiteD65 = monitor.ReportWhiteD65;
-            _reportColorSpaceSRGB = monitor.ReportColorSpaceSRGB;
-            _reportGammaSRGB = monitor.ReportGammaSRGB;
-            _useIccHDR = monitor.UseIccHDR;
-            _profilePathHDR = monitor.ProfilePathHDR;
-            _calibrateGammaHDR = monitor.CalibrateGammaHDR;
-            _targetPeak = monitor.TargetPeak;
-            _bpcThreshold = monitor.BPCThreshold;
-            _targetWhiteHDR = monitor.TargetWhiteHDR;
-            _customWhiteHdrX = monitor.CustomWhiteHdrX;
-            _customWhiteHdrY = monitor.CustomWhiteHdrY;
+            foreach (var prop in typeof(AdvancedViewModel).GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                var bindTo = prop.GetCustomAttribute<BindToPropertyAttribute>();
+
+                if (bindTo != null)
+                {                    
+                    var val = bindTo.Property.GetValue(monitor);
+                    prop.SetValue(this, val);
+                }
+            }
         }
 
         public void ApplyChanges()
         {
-            ChangedCalibration |= _monitor.Target != _target;
-            _monitor.Target = _target;
-            ChangedCalibration |= _monitor.Resolution != _resolution;
-            _monitor.Resolution = _resolution;
-            ChangedCalibration |= _monitor.UseIcc != _useIcc;
-            _monitor.UseIcc = _useIcc;
-            ChangedCalibration |= _monitor.ProfilePath != _profilePath;
-            _monitor.ProfilePath = _profilePath;
-            ChangedCalibration |= _monitor.LimitLuminance != _limitLuminance;
-            _monitor.LimitLuminance = _limitLuminance;
-            ChangedCalibration |= _monitor.MaxLuminance != _maxLuminance;
-            _monitor.MaxLuminance = _maxLuminance;
-            ChangedCalibration |= _monitor.CalibrateGamma != _calibrateGamma;
-            _monitor.CalibrateGamma = _calibrateGamma;
-            ChangedCalibration |= _monitor.SelectedGamma != _selectedGamma;
-            _monitor.SelectedGamma = _selectedGamma;
-            ChangedCalibration |= _monitor.CustomGamma != _customGamma;
-            _monitor.CustomGamma = _customGamma;
-            ChangedCalibration |= _monitor.CustomPercentage != _customPercentage;
-            _monitor.CustomPercentage = _customPercentage;
-            ChangedCalibration |= _monitor.UseVcgt != _useVcgt;
-            _monitor.UseVcgt = _useVcgt;
-            ChangedCalibration |= _monitor.OptimizeMatrix != _optimizeMatrix;
-            _monitor.OptimizeMatrix = _optimizeMatrix;
-            ChangedCalibration |= _monitor.TargetWhite != _targetWhite;
-            _monitor.TargetWhite = TargetWhite;
-            ChangedCalibration |= _monitor.CustomWhiteX != _customWhiteX;
-            _monitor.CustomWhiteX = CustomWhiteX;
-            ChangedCalibration |= _monitor.CustomWhiteY != _customWhiteY;
-            _monitor.CustomWhiteY = CustomWhiteY;
-            ChangedCalibration |= _monitor.ReportWhiteD65 != _reportWhiteD65;
-            _monitor.ReportWhiteD65 = ReportWhiteD65;
-            ChangedCalibration |= _monitor.ReportColorSpaceSRGB != _reportColorSpaceSRGB;
-            _monitor.ReportColorSpaceSRGB = ReportColorSpaceSRGB;
-            ChangedCalibration |= _monitor.ReportGammaSRGB != _reportGammaSRGB;
-            _monitor.ReportGammaSRGB = ReportGammaSRGB;
-            ChangedCalibration |= _monitor.UseIccHDR != _useIccHDR;
-            _monitor.UseIccHDR = _useIccHDR;
-            ChangedCalibration |= _monitor.ProfilePathHDR != _profilePathHDR;
-            _monitor.ProfilePathHDR = _profilePathHDR;
-            ChangedCalibration |= _monitor.CalibrateGammaHDR != _calibrateGammaHDR;
-            _monitor.CalibrateGammaHDR = _calibrateGammaHDR;
-            ChangedCalibration |= _monitor.TargetPeak != _targetPeak;
-            _monitor.TargetPeak = TargetPeak;
-            ChangedCalibration |= _monitor.BPCThreshold != _bpcThreshold;
-            _monitor.BPCThreshold = BPCThreshold;
-            ChangedCalibration |= _monitor.TargetWhiteHDR != _targetWhiteHDR;
-            _monitor.TargetWhiteHDR = TargetWhiteHDR;
-            ChangedCalibration |= _monitor.CustomWhiteHdrX != _customWhiteHdrX;
-            _monitor.CustomWhiteHdrX = CustomWhiteHdrX;
-            ChangedCalibration |= _monitor.CustomWhiteHdrY != _customWhiteHdrY;
-            _monitor.CustomWhiteHdrY = _customWhiteHdrY;
+            foreach (var prop in typeof(AdvancedViewModel).GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                var bindTo = prop.GetCustomAttribute<BindToPropertyAttribute>();
+
+                if (bindTo != null)
+                {
+                    var valMonitor = bindTo.Property.GetValue(_monitor);
+                    var valThis = prop.GetValue(this);
+                    ChangedCalibration |= valMonitor != valThis;
+                    bindTo.Property.SetValue(_monitor, valThis);
+                }
+            }
         }
 
         public ChromaticityCoordinates Coords => _monitor.Edid.DisplayParameters.ChromaticityCoordinates;

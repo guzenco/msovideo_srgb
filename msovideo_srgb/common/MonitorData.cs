@@ -19,7 +19,7 @@ namespace msovideo_srgb
 
         private MainViewModel _viewModel;
 
-        public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive, bool clampSdr)
+        public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive)
         {
             _viewModel = viewModel;
             Number = number;
@@ -33,7 +33,6 @@ namespace msovideo_srgb
             Path = path;
             MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2));
             MHCProfileName = new string(MHCProfileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
-            ClampSdr = clampSdr;
             HdrActive = hdrActive;
 
             if (Edid != null)
@@ -52,6 +51,7 @@ namespace msovideo_srgb
                 EdidColorSpace = Colorimetry.sRGB;
             }
 
+            Clamp = false;
             ProfilePath = "";
             MaxLuminance = 80;
             CustomGamma = 2.2;
@@ -80,49 +80,12 @@ namespace msovideo_srgb
                 return null;
             }
         }
-        public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive, 
-            bool clampSdr, bool useIcc, string profilePath,
-            bool limitLuminance, int maxLuminance,
-            bool calibrateGamma, int selectedGamma, double customGamma, double customPercentage, bool useVcgt, bool optimizeMatrix, int targetWhite, double customWhiteX, double customWhiteY,
-            bool reportWhiteD65, bool reportColorSpaceSRGB, bool reportGammaSRGB,
-            int target, int resolution,
-            bool useIccHDR, string profilePathHDR, bool calibrateGammaHDR, int peakTarget, double bpcThreshold, int targetWhiteHDR, double customWhiteHdrX, double customWhiteHdrY):
-            this(viewModel, number, display, path, hdrActive, clampSdr)
-        {
-            UseIcc = useIcc;
-            ProfilePath = profilePath;
-            LimitLuminance = limitLuminance;
-            MaxLuminance = maxLuminance;
-            CalibrateGamma = calibrateGamma;
-            SelectedGamma = selectedGamma;
-            CustomGamma = customGamma;
-            CustomPercentage = customPercentage;
-            UseVcgt = useVcgt;
-            OptimizeMatrix = optimizeMatrix;
-            TargetWhite = targetWhite;
-            CustomWhiteX = customWhiteX;
-            CustomWhiteY = customWhiteY;
-            ReportWhiteD65 = reportWhiteD65;
-            ReportColorSpaceSRGB = reportColorSpaceSRGB;
-            ReportGammaSRGB = reportGammaSRGB;
-            Target = target;
-            Resolution = resolution;
-            UseIccHDR = useIccHDR;
-            ProfilePathHDR = profilePathHDR;
-            CalibrateGammaHDR = calibrateGammaHDR;
-            TargetPeak = peakTarget;
-            BPCThreshold = bpcThreshold;
-            TargetWhiteHDR = targetWhiteHDR;
-            CustomWhiteHdrX = customWhiteHdrX;
-            CustomWhiteHdrY = customWhiteHdrY;
-        }
 
         public int Number { get; }
         public string Name { get; }
         public ExtendedEDID Edid { get; }
         public Display Display { get; }
         public string Path { get; }
-        public bool ClampSdr { get; set; }
         public bool HdrActive { get; }
         public string MHCProfileName { get; }
         public string MHCProfileNameSDR => "[SDR] " + MHCProfileName + ".icm";
@@ -356,7 +319,7 @@ namespace msovideo_srgb
                 if (e is DisplayNotFoundException) return;
                 MessageBox.Show(e.Message);
                 _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
-                ClampSdr = _clamped;
+                Clamp = _clamped;
                 OnPropertyChanged(nameof(Clamped));
             }
             catch { }
@@ -373,7 +336,7 @@ namespace msovideo_srgb
                 try
                 {
                     UpdateClamp(value);
-                    ClampSdr = value;
+                    Clamp = value;
                     _viewModel.SaveConfig();
                 }
                 catch (Exception e)
@@ -392,7 +355,7 @@ namespace msovideo_srgb
         {
             try
             {
-                var clamped = CanClamp && ClampSdr;
+                var clamped = CanClamp && Clamp;
                 UpdateClamp(clamped);
                 _clamped = clamped;
                 OnPropertyChanged(nameof(CanClamp));
@@ -417,57 +380,87 @@ namespace msovideo_srgb
             get => !UseIcc;
         }
 
-        public bool UseIcc { set; get; }
+        [Persistent("clamp")]
+        public bool Clamp { get; set; }
 
-        public string ProfilePath { set; get; }
-
-        public bool LimitLuminance { set; get; }
-
-        public int MaxLuminance { set; get; }
-
-        public bool CalibrateGamma { set; get; }
-
-        public int SelectedGamma { set; get; }
-
-        public double CustomGamma { set; get; }
-
-        public double CustomPercentage { set; get; }
-
-        public bool UseVcgt { set; get; }
-
-        public bool OptimizeMatrix { set; get; }
-
-        public int TargetWhite { set; get; }
-
-        public double CustomWhiteX { set; get; }
-
-        public double CustomWhiteY { set; get; }
-
-        public bool ReportWhiteD65 { set; get; }
-
-        public bool ReportColorSpaceSRGB { set; get; }
-
-        public bool ReportGammaSRGB { set; get; }
-
+        [Persistent("target")]
         public int Target { set; get; }
 
+        [Persistent("resolution", 2)]
         public int Resolution { set; get; }
 
+        [Persistent("use_icc")]
+        public bool UseIcc { set; get; }
+
+        [Persistent("icc_path")]
+        public string ProfilePath { set; get; }
+
+        [Persistent("limit_luminance", false)]
+        public bool LimitLuminance { set; get; }
+
+        [Persistent("max_luminance", 80)]
+        public int MaxLuminance { set; get; }
+
+        [Persistent("calibrate_gamma")]
+        public bool CalibrateGamma { set; get; }
+
+        [Persistent("selected_gamma")]
+        public int SelectedGamma { set; get; }
+
+        [Persistent("custom_gamma")]
+        public double CustomGamma { set; get; }
+
+        [Persistent("custom_percentage")]
+        public double CustomPercentage { set; get; }
+
+        [Persistent("use_vcgt", false)]
+        public bool UseVcgt { set; get; }
+
+        [Persistent("optimize_matrix", true)]
+        public bool OptimizeMatrix { set; get; }
+
+        [Persistent("target_white", 0)]
+        public int TargetWhite { set; get; }
+
+        [Persistent("custom_white_x", 0.3127)]
+        public double CustomWhiteX { set; get; }
+
+        [Persistent("custom_white_y", 0.3290)]
+        public double CustomWhiteY { set; get; }
+
+        [Persistent("report_white_d65", false)]
+        public bool ReportWhiteD65 { set; get; }
+
+        [Persistent("report_color_space_srgb", false)]
+        public bool ReportColorSpaceSRGB { set; get; }
+
+        [Persistent("report_gamma_srgb", false)]
+        public bool ReportGammaSRGB { set; get; }
+
+        [Persistent("use_icc_hdr", false)]
         public bool UseIccHDR { set; get; }
 
+        [Persistent("icc_path_hdr", "")]
         public string ProfilePathHDR { set; get; }
 
+        [Persistent("calibrate_gamma_hdr", false)]
         public bool CalibrateGammaHDR { set; get; }
 
+        [Persistent("target_peak", 10000)]
         public int TargetPeak { set; get; }
 
+        [Persistent("bpc_threshold", 80)]
         public double BPCThreshold { set; get; }
 
+        [Persistent("target_white_hdr", 0)]
         public int TargetWhiteHDR { set; get; }
 
+        [Persistent("custom_white_hdr_x", 0.3127)]
         public double CustomWhiteHdrX { set; get; }
 
+        [Persistent("custom_white_hdr_y", 0.3290)]
         public double CustomWhiteHdrY { set; get; }
+
         public Colorimetry.ColorSpace EdidColorSpace { get; }
 
         private Colorimetry.ColorSpace TargetColorSpace => !HdrActive ? Colorimetry.ColorSpaces[Target]: Colorimetry.Native;
