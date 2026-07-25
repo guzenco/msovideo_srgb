@@ -16,10 +16,29 @@ namespace msovideo_srgb
             if (File.Exists(_configPath))
             {
                 config = XElement.Load(_configPath);
+
+                if (config.Name == "monitors")
+                {
+                    var monitors = config;
+                    config = new XElement("config");
+
+                    foreach (var monitor in monitors.Descendants("monitor"))
+                    {
+                        var clamp_sdr = monitor.Attribute("clamp_sdr");
+                        monitor.SetAttributeValue("clamp", clamp_sdr.Value);
+                        clamp_sdr.Remove();
+                    }
+                    
+                    monitors.Name = "preset";
+                    monitors.SetAttributeValue("name", "Preset 1");
+
+                    config.Add(monitors);
+                }
             }
             else
             {
-                config = new XElement("monitors");
+                config = new XElement("config");
+                AddPreset();
             }
         }
 
@@ -30,20 +49,107 @@ namespace msovideo_srgb
 
         public static void SaveMonitorData(MonitorData monitorData)
         {
-            var monitor = config.Descendants("monitor").FirstOrDefault(x => (string)x.Attribute("path") == monitorData.Path);
+            var preset = GetActivePreset();
+            var monitor = preset.Descendants("monitor").FirstOrDefault(x => (string)x.Attribute("path") == monitorData.Path);
             if (monitor == null)
             {
                 monitor = new XElement("monitor");
                 monitor.SetAttributeValue("path", monitorData.Path);
-                config.Add(monitor);
+                preset.Add(monitor);
             }
             SaveO(monitorData, monitor);
         }
 
         public static void LoadMonitorData(MonitorData monitor)
         {
-            var element = config.Descendants("monitor").FirstOrDefault(x => (string)x.Attribute("path") == monitor.Path);
+            var preset = GetActivePreset();
+            var element = preset.Descendants("monitor").FirstOrDefault(x => (string)x.Attribute("path") == monitor.Path);
             LoadO(monitor, element);
+        }
+
+        private static XElement[] GetPresets()
+        {
+            return config.Descendants("preset").ToArray();
+        }
+
+        private static XElement GetPreset(int presetId)
+        {
+            var presets = GetPresets();
+            if (presetId >= presets.Length || presetId < 0) throw new Exception("Unknown preset");
+            return presets[presetId];
+        }
+
+        private static XElement GetActivePreset()
+        {
+            return GetPreset(GetActivePresetId());
+        }
+
+        public static int GetActivePresetId()
+        {
+            return (int?)config.Attribute("active_preset") ?? 0;
+        }
+
+        public static void SetActivePreset(int presetId)
+        {
+            config.SetAttributeValue("active_preset", presetId);
+        }
+
+        public static string[] GetPresetNames()
+        {
+            var presets = GetPresets();
+            string[] presetNames = new string[presets.Length];
+
+            for (int i = 0; i < presets.Length; i++)
+            {
+                var preset = presets[i];
+                var name = preset.Attribute("name").Value;
+                presetNames[i] = name;
+            }
+
+            return presetNames;
+        }
+
+        public static void RenamePreset(int presetId, string name)
+        {
+            var preset = GetPreset(presetId);
+            preset.SetAttributeValue("name", name);
+        }
+
+        public static void DeletePreset(int presetId)
+        {
+            var preset = GetPreset(presetId);
+            preset.Remove();
+            
+            var presets = GetPresets();
+            var activePreset = GetActivePresetId();
+            activePreset = Math.Min(activePreset, presets.Length - 1);   
+            SetActivePreset(activePreset);
+            
+            if(presets.Length == 0)
+            {
+                AddPreset();
+            }
+        }
+
+        public static void AddPreset()
+        {
+            var presets = GetPresets().ToArray();
+            
+            XElement newConfigurection;
+            if (presets.Length > 0)
+            {
+                var activePreset = GetActivePreset();
+                newConfigurection = new XElement(activePreset);
+            }
+            else
+            {
+                newConfigurection = new XElement("preset");
+            }
+
+            newConfigurection.SetAttributeValue("name", $"Preset {presets.Length + 1}");
+            config.Add(newConfigurection);
+
+            SetActivePreset(presets.Length);
         }
 
         private static XElement SaveO<T>(T obj, XElement element)
