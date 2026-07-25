@@ -262,7 +262,7 @@ namespace msovideo_srgb
 
             if (hr != 0)
             {
-                Marshal.ThrowExceptionForHR(hr);
+                return null;
             }
 
             return outputCapabilities.SupportsMhc2;
