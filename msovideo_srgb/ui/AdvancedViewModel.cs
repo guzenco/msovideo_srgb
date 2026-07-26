@@ -151,7 +151,7 @@ namespace msovideo_srgb
                 _useIcc = !value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(UseIcc));
-                OnPropertyChanged(nameof(EdidWarning));
+                OnPropertyChanged(nameof(ProfilePathSDRWarning));
             }
             get => !_useIcc;
         }
@@ -164,7 +164,7 @@ namespace msovideo_srgb
                 _useIcc = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(UseEdid));
-                OnPropertyChanged(nameof(EdidWarning));
+                OnPropertyChanged(nameof(ProfilePathSDRWarning));
             }
             get => _useIcc;
         }
@@ -177,6 +177,7 @@ namespace msovideo_srgb
                 _profilePath = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ProfileName));
+                OnPropertyChanged(nameof(ProfilePathSDRWarning));
             }
             get => _profilePath;
         }
@@ -343,7 +344,6 @@ namespace msovideo_srgb
                 if (value == _target) return;
                 _target = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(EdidWarning));
             }
             get => _target;
         }
@@ -366,6 +366,7 @@ namespace msovideo_srgb
                 if (value == _useIccHDR) return;
                 _useIccHDR = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ProfilePathHDRWarning));
             }
             get => _useIccHDR;
         }
@@ -378,6 +379,7 @@ namespace msovideo_srgb
                 _profilePathHDR = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ProfileNameHDR));
+                OnPropertyChanged(nameof(ProfilePathHDRWarning));
             }
             get => _profilePathHDR;
         }
@@ -515,10 +517,16 @@ namespace msovideo_srgb
             _monitor.HdrActive 
             ? Visibility.Visible : Visibility.Collapsed;
 
-        public Visibility EdidWarning =>
+        public Visibility ProfilePathSDRWarning =>
             MHC2NotSupportedWarning != Visibility.Visible &&
             DuplicateDesktopWarning != Visibility.Visible &&
-            UseEdid && Colorimetry.ColorSpaces[_target].Equals(_monitor.EdidColorSpace)
+            UseIcc && ProfilePath.Equals("")
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        public Visibility ProfilePathHDRWarning =>
+            MHC2NotSupportedWarning != Visibility.Visible &&
+            DuplicateDesktopWarning != Visibility.Visible &&
+            UseIccHDR && ProfilePathHDR.Equals("")
             ? Visibility.Visible : Visibility.Collapsed;
 
         public double CustomPercentage
