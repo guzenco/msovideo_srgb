@@ -154,7 +154,7 @@ namespace msovideo_srgb
                     if (presetId != Config.GetActivePresetId())
                     {
                         Config.SetActivePreset(presetId);
-                        Config.Save();
+                        Config.SafeSave();
                         Presets.SelectedIndex = presetId;
                         _viewModel.OnDisplaySettingsChanged(null, null);
                     }
@@ -188,7 +188,7 @@ namespace msovideo_srgb
                 if (name != null && name != presetName)
                 {
                     Config.RenamePreset(presetId, name);
-                    Config.Save();
+                    Config.SafeSave();
                     UpdatePresets();
                 }
             };
@@ -204,7 +204,7 @@ namespace msovideo_srgb
                 {
                     int activeId = Config.GetActivePresetId();
                     Config.DeletePreset(presetId);
-                    Config.Save();
+                    Config.SafeSave();
                     UpdatePresets();
                     if (activeId == presetId)
                     {
@@ -240,7 +240,7 @@ namespace msovideo_srgb
                     if (presetId != Config.GetActivePresetId())
                     {
                         Config.SetActivePreset(presetId);
-                        Config.Save();
+                        Config.SafeSave();
                         _viewModel.OnDisplaySettingsChanged(null, null);
                     }
                 };
@@ -262,7 +262,7 @@ namespace msovideo_srgb
             {
                 Presets.SelectedIndex = -1;
                 Config.AddPreset();
-                Config.Save();
+                Config.SafeSave();
                 UpdatePresets();
             }
         }

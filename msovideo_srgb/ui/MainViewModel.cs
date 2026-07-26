@@ -108,23 +108,15 @@ namespace msovideo_srgb
         }
 
         public void SaveConfig()
-        {
-            try
-            {
-                Config.Load();
+        {    
+            Config.Load();
 
-                foreach (var m in Monitors)
-                {
-                    Config.SaveMonitorData(m);
-                }
-
-                Config.Save();
-            }
-            catch (Exception ex)
+            foreach (var m in Monitors)
             {
-                MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
-                Environment.Exit(1);
+                Config.SaveMonitorData(m); 
             }
+
+            Config.SafeSave();           
         }
     }
 }

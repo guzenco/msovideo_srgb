@@ -42,6 +42,19 @@ namespace msovideo_srgb
             }
         }
 
+        public static void SafeSave()
+        {
+            try
+            {
+                Save();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
+                Environment.Exit(1);
+            }
+        }
+
         public static void Save()
         {
             config.Save(_configPath);
