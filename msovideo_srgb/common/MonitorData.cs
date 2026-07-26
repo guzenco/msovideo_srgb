@@ -256,6 +256,29 @@ namespace msovideo_srgb
                         }
                     }
 
+                    double? PeakLuminance = null;
+                    double? MaxFullFrameLuminance = null;
+                    double? MinLuminance = null;
+
+                    if (ExcludeHdrMetadata)
+                    {
+                        if (HdrActive)
+                        {
+                            var colorCapabilities = DisplayColorCapabilities.GetColorCapabilities(Display);
+                            if(colorCapabilities != null)
+                            {
+                                PeakLuminance = colorCapabilities?.PeakLuminance;
+                                MaxFullFrameLuminance = colorCapabilities?.MaxFullFrameLuminance;
+                                MinLuminance = colorCapabilities?.MinLuminance;
+                            }
+                        }
+                        else
+                        {
+                            PeakLuminance = -1;
+                            MinLuminance = -1;
+                        }
+                    }
+
                     ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance,
                             reportWhiteD65: ReportWhiteD65 || HdrActive,
                             reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
@@ -263,7 +286,10 @@ namespace msovideo_srgb
                             useVcgt: UseVcgt,
                             optimizeMatrix: OptimizeMatrix,
                             acmMode: HdrActive,
-                            gamma: gamma);
+                            gamma: gamma,
+                            peakLuminanceOverride: PeakLuminance,
+                            maxFullFrameLuminanceOverride: MaxFullFrameLuminance,
+                            minLuminanceOverride: MinLuminance);
                 }
 
                 ApplyProfile(MHCProfileNameSDR, false);
@@ -436,6 +462,9 @@ namespace msovideo_srgb
 
         [Persistent("report_gamma_srgb", false)]
         public bool ReportGammaSRGB { set; get; }
+
+        [Persistent("exclude_hdr_metadata", false)]
+        public bool ExcludeHdrMetadata { set; get; }
 
         [Persistent("use_icc_hdr", false)]
         public bool UseIccHDR { set; get; }

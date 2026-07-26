@@ -33,7 +33,7 @@
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding ProfilePathSDRWarning}" Foreground="Red">Profile path required – cannot clamp SDR</TextBlock>
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding ProfilePathHDRWarning}" Foreground="Red">Profile path required – cannot clamp HDR</TextBlock>
                     <TextBlock TextWrapping="Wrap" Visibility="{Binding HdrWarning}" Foreground="Red">HDR or ACM is active - treat target as Native</TextBlock>
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding HdrWarning}" Foreground="Red">and ignore MHC2 profile settings</TextBlock>
+                    <TextBlock TextWrapping="Wrap" Visibility="{Binding HdrWarning}" Foreground="Red">and ignore MHC2 profile report settings</TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock VerticalAlignment="Center" Text="Target" />
@@ -228,7 +228,10 @@
                                     <TextBlock Text="Report sRGB color space" Margin="0,0,0,6" />
                                 </CheckBox>
                                 <CheckBox IsChecked="{Binding ReportGammaSRGB}" HorizontalContentAlignment="Stretch">
-                                    <TextBlock Text="Report sRGB gamma" Margin="0,0,0,0" />
+                                    <TextBlock Text="Report sRGB gamma" Margin="0,0,0,6" />
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding ExcludeHdrMetadata}" HorizontalContentAlignment="Stretch">
+                                    <TextBlock Text="Exclude HDR metadata" Margin="0,0,0,0" />
                                 </CheckBox>
                             </StackPanel>
                         </GroupBox>

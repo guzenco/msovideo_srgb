@@ -97,6 +97,7 @@
     <Compile Include="icc\ICCProfileGenerator.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />
     <Compile Include="common\Config.cs" />
+    <Compile Include="tools\DisplayColorCapabilities.cs" />
     <Compile Include="tools\DisplayColorProfileManager.cs" />
     <Compile Include="tools\DisplayStateObserver.cs" />
     <Compile Include="ui\AboutWindow.xaml.cs">

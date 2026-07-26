@@ -68,6 +68,9 @@ namespace msovideo_srgb
         [BindToProperty(typeof(MonitorData), nameof(MonitorData.ReportGammaSRGB))]
         private bool _reportGammaSRGB;
 
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.ExcludeHdrMetadata))]
+        private bool _excludeHdrMetadata;
+
         [BindToProperty(typeof(MonitorData), nameof(MonitorData.UseIccHDR))]
         private bool _useIccHDR;
 
@@ -335,6 +338,17 @@ namespace msovideo_srgb
                 OnPropertyChanged();
             }
             get => _reportGammaSRGB;
+        }
+
+        public bool ExcludeHdrMetadata
+        {
+            set
+            {
+                if (value == _excludeHdrMetadata) return;
+                _excludeHdrMetadata = value;
+                OnPropertyChanged();
+            }
+            get => _excludeHdrMetadata;
         }
 
         public int Target
