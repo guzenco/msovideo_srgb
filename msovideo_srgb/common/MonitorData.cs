@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
+using EDIDParser;
 using EDIDParser.Descriptors;
 using EDIDParser.Enums;
 using Microsoft.Win32;
@@ -60,20 +61,21 @@ namespace msovideo_srgb
             OptimizeMatrix = true;
             Resolution = 2;
             ProfilePathHDR = "";
-            TargetPeak = 10000;
+            MinLuminanceHDR = 0;
+            TargetPeak = PeakLuminanceHDR = MaxFullFrameLuminanceHDR = 10000;
             BPCThreshold = 80;
             CustomWhiteX = CustomWhiteHdrX = Colorimetry.D65.X;
             CustomWhiteY = CustomWhiteHdrY = Colorimetry.D65.Y;
             ReportWhiteD65 = ReportColorSpaceSRGB = ReportGammaSRGB = false;
         }
 
-        public static ExtendedEDID GetEDID(string path, Display display)
+        public static EDID GetEDID(string path, Display display)
         {
             try
             {
                 var registryPath = "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\DISPLAY\\";
                 registryPath += string.Join("\\", path.Split('#').Skip(1).Take(2));
-                return new ExtendedEDID((byte[])Registry.GetValue(registryPath + "\\Device Parameters", "EDID", null));
+                return new EDID((byte[])Registry.GetValue(registryPath + "\\Device Parameters", "EDID", null));
             }
             catch
             {
@@ -83,14 +85,13 @@ namespace msovideo_srgb
 
         public int Number { get; }
         public string Name { get; }
-        public ExtendedEDID Edid { get; }
+        public EDID Edid { get; }
         public Display Display { get; }
         public string Path { get; }
         public bool HdrActive { get; }
         public string MHCProfileName { get; }
         public string MHCProfileNameSDR => "[SDR] " + MHCProfileName + ".icm";
         public string MHCProfileNameHDR => "[HDR] " + MHCProfileName + ".icm";
-        public string MHCProfileNameDefaultHDR => "[HDR] " + MHCProfileName + " default.icm";
 
         public const string MHCProfileNameReset = "msovideo_srgb_no_transform.icm";
 
@@ -107,13 +108,6 @@ namespace msovideo_srgb
             DisplayColorProfileManager.SetProfile(Display, profileName, hdr);
 
             DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameReset, hdr);
-
-            if (!UseIccHDR && DisplayColorProfileManager.GetProfile(Display, true).Equals("") && Edid != null && Edid.ExtensionCTA861 != null)
-            {
-                ColorProfileFactory.CreateProfile(MHCProfileNameDefaultHDR, CurveResolution, Edid);
-                DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameDefaultHDR, true);
-                DisplayColorProfileManager.SetProfile(Display, MHCProfileNameDefaultHDR, true);
-            }
         }
 
         private void UnapplyProfile(string profileName, bool hdr, bool force)
@@ -135,19 +129,6 @@ namespace msovideo_srgb
                 {
                     DisplayColorProfileManager.RemoveAssociation(Display, profileName, hdr);
                 }
-
-                if (Edid != null && Edid.ExtensionCTA861 != null)
-                {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameDefaultHDR, CurveResolution, Edid);
-                    DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameDefaultHDR, hdr);
-                    DisplayColorProfileManager.SetProfile(Display, MHCProfileNameDefaultHDR, hdr);
-                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameDefaultHDR, hdr);
-                    if (!hdr && DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameDefaultHDR))
-                    {
-                        DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameDefaultHDR, true);
-                    }
-                }
-
             }
         }
 
@@ -188,7 +169,7 @@ namespace msovideo_srgb
                 UnapplyProfile(profileNameSDR, false, true);
             }
 
-            if (Regex.IsMatch(profileNameHDR, MHCProfileNamePattern) && profileNameHDR != MHCProfileNameHDR && profileNameHDR != MHCProfileNameDefaultHDR)
+            if (Regex.IsMatch(profileNameHDR, MHCProfileNamePattern) && profileNameHDR != MHCProfileNameHDR)
             {
                 UnapplyProfile(profileNameHDR, true, true);
             }
@@ -304,10 +285,27 @@ namespace msovideo_srgb
                     luminance = profile.Luminance(matrixWhite, gamma);
                 }
 
-                ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePointHDR, luminance,
-                        gamma: gamma,
-                        curve: new SrgbEOTF());
+                if (OverrideMetadataHDR)
+                {
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, Colorimetry.Native, TargetWhitePointHDR, luminance,
+                            gamma: gamma,
+                            curve: new SrgbEOTF(),
+                            peakLuminanceOverride: PeakLuminanceHDR,
+                            maxFullFrameLuminanceOverride: MaxFullFrameLuminanceHDR,
+                            minLuminanceOverride: MinLuminanceHDR);
+                }
+                else
+                {
+                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, Colorimetry.Native, TargetWhitePointHDR, luminance,
+                            gamma: gamma,
+                            curve: new SrgbEOTF());
+                }
 
+                ApplyProfile(MHCProfileNameHDR, true);
+            }
+            else if (OverrideMetadataHDR)
+            {
+                ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, PeakLuminanceHDR, MaxFullFrameLuminanceHDR, MinLuminanceHDR);
                 ApplyProfile(MHCProfileNameHDR, true);
             }
         }
@@ -460,6 +458,18 @@ namespace msovideo_srgb
 
         [Persistent("custom_white_hdr_y", 0.3290)]
         public double CustomWhiteHdrY { set; get; }
+
+        [Persistent("override_metadata_hdr", false)]
+        public bool OverrideMetadataHDR { set; get; }
+
+        [Persistent("peak_luminance_hdr", 10000)]
+        public int PeakLuminanceHDR { set; get; }
+
+        [Persistent("max_full_frame_luminance_hdr", 10000)]
+        public int MaxFullFrameLuminanceHDR { set; get; }
+
+        [Persistent("min_luminance_hdr", 0)]
+        public double MinLuminanceHDR { set; get; }
 
         public Colorimetry.ColorSpace EdidColorSpace { get; }
 

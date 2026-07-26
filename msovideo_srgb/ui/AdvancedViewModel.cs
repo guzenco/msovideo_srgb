@@ -92,6 +92,18 @@ namespace msovideo_srgb
         [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomWhiteHdrY))]
         private double _customWhiteHdrY;
 
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.OverrideMetadataHDR))]
+        private bool _overrideMetadataHDR;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.PeakLuminanceHDR))]
+        private int _peakLuminanceHDR;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.MaxFullFrameLuminanceHDR))]
+        private int _maxFullFrameLuminanceHDR;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.MinLuminanceHDR))]
+        private double _minLuminanceHDR;
+
         public AdvancedViewModel()
         {
             throw new NotSupportedException();
@@ -439,6 +451,50 @@ namespace msovideo_srgb
                 OnPropertyChanged();
             }
             get => _customWhiteHdrY;
+        }
+
+        public bool OverrideMetadataHDR
+        {
+            set
+            {
+                if (value == _overrideMetadataHDR) return;
+                _overrideMetadataHDR = value;
+                OnPropertyChanged();
+            }
+            get => _overrideMetadataHDR;
+        }
+
+        public int PeakLuminanceHDR
+        {
+            set
+            {
+                if (value == _peakLuminanceHDR) return;
+                _peakLuminanceHDR = value;
+                OnPropertyChanged();
+            }
+            get => _peakLuminanceHDR;
+        }
+
+        public int MaxFullFrameLuminanceHDR
+        {
+            set
+            {
+                if (value == _maxFullFrameLuminanceHDR) return;
+                _maxFullFrameLuminanceHDR = value;
+                OnPropertyChanged();
+            }
+            get => _maxFullFrameLuminanceHDR;
+        }
+
+        public double MinLuminanceHDR
+        {
+            set
+            {
+                if (value == _minLuminanceHDR) return;
+                _minLuminanceHDR = value;
+                OnPropertyChanged();
+            }
+            get => _minLuminanceHDR;
         }
 
         public Visibility MHC2SupportUnknownWarning =>

@@ -103,7 +103,7 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, ExtendedEDID edid)
+        public static void CreateProfile(string profileName, uint resolution, EDID edid, double peakLuminance, double maxFullFrameLuminance, double minLuminance)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -117,21 +117,21 @@ namespace msovideo_srgb
                 Blue = new Colorimetry.Point { X = Math.Round(coords.BlueX, 3), Y = Math.Round(coords.BlueY, 3) },
                 White = Colorimetry.D65
             };
-            Colorimetry.Point edidWhite = new Colorimetry.Point { X = Math.Round(coords.WhiteX, 3), Y = Math.Round(coords.WhiteY, 3) };
             double edidGamma = edid.DisplayParameters.DisplayGamma;
-            ExtensionCTA861 cta = edid.ExtensionCTA861;
 
             profileGenerator.SetManufacturerID(edid.ManufacturerId);
             profileGenerator.setDeviceModel(edid.ProductCode);
 
+            Matrix chromaticAdaptation = Colorimetry.WhiteToWhiteAdaptation(Colorimetry.RGBToXYZ(Colorimetry.D65), Colorimetry.D50);
+            profileGenerator.AddTag("chad", ICCProfileGenerator.MakeMatrixTag(chromaticAdaptation));
 
-            profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(Colorimetry.D65)));
-            AddMatrix(profileGenerator, Colorimetry.sRGB);
+            profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.D50));
+            AddMatrix(profileGenerator, edidColorSpace);
 
             ToneCurve gamaCurve = new GammaToneCurve(edidGamma);
             AddCurve(profileGenerator, gamaCurve, resolution);
 
-            profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(cta.MaxFullFrameLuminance));
+            profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(maxFullFrameLuminance));
 
             double[][] luts = new double[][] {
                     new double[] { 0, 1 },
@@ -141,7 +141,7 @@ namespace msovideo_srgb
 
             Matrix matrix = Matrix.Identity();
 
-            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(cta.MinLuminance, cta.MaxLuminance, matrix, luts));
+            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(minLuminance, peakLuminance, matrix, luts));
 
             profileGenerator.SaveAs(profileName);
         }
@@ -243,7 +243,10 @@ namespace msovideo_srgb
             bool optimizeMatrix = false, 
             bool acmMode = false, 
             ToneCurve gamma = null, 
-            ToneCurve curve = null)
+            ToneCurve curve = null,
+            double? peakLuminanceOverride = null,
+            double? maxFullFrameLuminanceOverride = null,
+            double? minLuminanceOverride = null)
         {
             var profileGenerator = new ICCProfileGenerator();
 
@@ -376,11 +379,15 @@ namespace msovideo_srgb
                 };
             }
 
+            double peakLuminance = peakLuminanceOverride ?? luminance;
+            double maxFullFrameLuminance = maxFullFrameLuminanceOverride ?? luminance;
+            double minLuminance = minLuminanceOverride ?? profile.tagBlack * profile.luminance;
+
             Matrix matrix = matrixCSC;
 
-            profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(luminance));
+            profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(maxFullFrameLuminance));
 
-            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(profile.tagBlack * profile.luminance, luminance, matrix, luts));
+            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(minLuminance, peakLuminance, matrix, luts));
 
             profileGenerator.SaveAs(profileName);
         }

@@ -267,7 +267,7 @@
                                 <TextBlock Text="x" VerticalAlignment="Center" Margin="2,0,0,0"/>
                             </StackPanel>
                         </StackPanel>
-                        <CheckBox IsChecked="{Binding UseIccHDR}" HorizontalContentAlignment="Stretch">
+                        <CheckBox IsChecked="{Binding UseIccHDR}" HorizontalContentAlignment="Stretch" Margin="0,0,0,6">
                             <StackPanel IsEnabled="{Binding UseIccHDR}" Margin="0,0,0,0">
                                 <TextBlock Text="Use ICC profile" Margin="0,0,0,6" />
                                 <StackPanel>
@@ -312,6 +312,59 @@
                             </StackPanel>
                         </CheckBox>
                         
+                        <CheckBox IsChecked="{Binding OverrideMetadataHDR}" HorizontalContentAlignment="Stretch">
+                            <StackPanel IsEnabled="{Binding OverrideMetadataHDR}" Margin="0,0,0,0">
+                                <TextBlock Text="Override static metadata" Margin="0,0,0,6" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label HorizontalAlignment="Left" Grid.Row="0" Grid.Column="0">Peak luminance</Label>
+                                    <TextBox IsEnabled="{Binding OverrideMetadataHDR}" Style="{StaticResource TextBoxInError}" Grid.Row="0" Grid.Column="1" VerticalContentAlignment="Center" TextAlignment="Right" Width="50" Height="22">
+                                        <TextBox.Text>
+                                            <Binding Path="PeakLuminanceHDR" UpdateSourceTrigger="PropertyChanged">
+                                                <Binding.ValidationRules>
+                                                    <local:RangeRule Min="80" Max="10000" />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <Label Grid.Row="0" Grid.Column="2">cd/m2</Label>
+
+                                    <Label HorizontalAlignment="Left" Grid.Row="1" Grid.Column="0">Max full frame luminance</Label>
+                                    <TextBox IsEnabled="{Binding OverrideMetadataHDR}" Style="{StaticResource TextBoxInError}" Grid.Row="1" Grid.Column="1" VerticalContentAlignment="Center" TextAlignment="Right" Width="50" Height="22">
+                                        <TextBox.Text>
+                                            <Binding Path="MaxFullFrameLuminanceHDR" UpdateSourceTrigger="PropertyChanged">
+                                                <Binding.ValidationRules>
+                                                    <local:RangeRule Min="80" Max="10000" />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <Label Grid.Row="1" Grid.Column="2">cd/m2</Label>
+
+                                    <Label HorizontalAlignment="Left" Grid.Row="2" Grid.Column="0">Min luminance</Label>
+                                    <TextBox IsEnabled="{Binding OverrideMetadataHDR}" Style="{StaticResource TextBoxInError}" Grid.Row="2" Grid.Column="1" VerticalContentAlignment="Center" TextAlignment="Right" Width="50" Height="22">
+                                        <TextBox.Text>
+                                            <Binding Path="MinLuminanceHDR" UpdateSourceTrigger="PropertyChanged">
+                                                <Binding.ValidationRules>
+                                                    <local:RangeRule Min="0" Max="10" />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <Label Grid.Row="2" Grid.Column="2">cd/m2</Label>
+                                </Grid>
+                            </StackPanel>
+                        </CheckBox>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>
