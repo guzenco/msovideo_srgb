@@ -11,6 +11,19 @@ namespace msovideo_srgb
         private static XElement config;
         private static string _configPath = AppDomain.CurrentDomain.BaseDirectory + "config.xml";
 
+        public static void SafeLoad()
+        {
+            try
+            {
+                Load();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
+                Environment.Exit(1);
+            }
+        }
+
         public static void Load()
         {
             if (File.Exists(_configPath))
@@ -135,7 +148,16 @@ namespace msovideo_srgb
             
             var presets = GetPresets();
             var activePreset = GetActivePresetId();
-            activePreset = Math.Min(activePreset, presets.Length - 1);   
+
+            if (activePreset <= presetId)
+            {
+                activePreset = Math.Min(activePreset, presets.Length - 1);
+            }
+            else
+            {
+                activePreset = Math.Min(activePreset -1, presets.Length - 1);
+            }
+
             SetActivePreset(activePreset);
             
             if(presets.Length == 0)

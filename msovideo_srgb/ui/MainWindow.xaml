@@ -26,6 +26,7 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <EventSetter Event="Click" Handler="MenuItem_Click"/>
         </Style>
     </Window.Resources>
     <DockPanel Margin="6,0,6,6">
@@ -108,13 +109,26 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <ComboBox x:Name="Presets" VerticalAlignment="Bottom" HorizontalContentAlignment="Center" SelectionChanged="Presets_SelectionChanged">
+        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding ActivePreset, Mode=TwoWay}" DisplayMemberPath="Name" VerticalAlignment="Bottom" HorizontalContentAlignment="Center">
             <ComboBox.ItemContainerStyle>
                 <Style TargetType="ComboBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
                     <Setter Property="Padding" Value="1,1,17,1"/>
                     <Setter Property="BorderThickness" Value="0,0.25,0,0"/>
                     <Setter Property="BorderBrush" Value="LightGray"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="Rename" Style="{StaticResource MenuItemStyle}" />
+                                <MenuItem Header="Delete" Style="{StaticResource MenuItemStyle}" />
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Id}" Value="-1">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                        </DataTrigger>
+                    </Style.Triggers>
                 </Style>
             </ComboBox.ItemContainerStyle>
         </ComboBox>

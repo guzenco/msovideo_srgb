@@ -47,7 +47,6 @@ namespace msovideo_srgb
                 Hide();
             }
 
-            UpdatePresets();
             InitializeTrayIcon();
         }
 
@@ -97,6 +96,29 @@ namespace msovideo_srgb
             ReapplyMonitorSettings();
         }
 
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MainViewModel.Preset preset)
+            {
+                if (menuItem.Header.ToString() == "Rename")
+                {
+                    string name = Dialogs.InputDialog(preset.Name, "Rename");
+                    if (name != null && name != preset.Name)
+                    {
+                        _viewModel.RenamePreset(preset, name);
+                    }
+                }
+                else if (menuItem.Header.ToString() == "Delete")
+                {
+                    var confirm = Dialogs.ConfirmDialog($"Delete {preset.Name}?", "Delete");
+                    if (confirm)
+                    {
+                        _viewModel.DeletePreset(preset);
+                    }
+                }
+            }
+        }
+
         private void InitializeTrayIcon()
         {
             var notifyIcon = new NotifyIcon
@@ -138,27 +160,17 @@ namespace msovideo_srgb
 
             _contextMenu.MenuItems.Add("-");
 
-            var presets = Config.GetPresetNames();
-            var activePreset = Config.GetActivePresetId();
+            var activePreset = _viewModel.ActivePreset;
 
-            for (int i = 0; i < presets.Length; i++)
+            foreach (var preset in _viewModel.Presets)
             {
-                int presetId = i;
-                var presetName = presets[i];
+                if (preset.Id == -1) continue;
+                
                 var item = new MenuItemWF();
                 _contextMenu.MenuItems.Add(item);
-                item.Text = presetName;
-                item.Checked = i == activePreset;
-                item.Click += (s, e) =>
-                {
-                    if (presetId != Config.GetActivePresetId())
-                    {
-                        Config.SetActivePreset(presetId);
-                        Config.SafeSave();
-                        Presets.SelectedIndex = presetId;
-                        _viewModel.OnDisplaySettingsChanged(null, null);
-                    }
-                };
+                item.Text = preset.Name;
+                item.Checked = preset == activePreset;
+                item.Click += (s, e) => _viewModel.ActivePreset = preset;
             }
 
             _contextMenu.MenuItems.Add("-");
@@ -172,99 +184,6 @@ namespace msovideo_srgb
             _contextMenu.MenuItems.Add(exitItem);
             exitItem.Text = "Exit";
             exitItem.Click += delegate { Close(); };
-        }
-
-        private ContextMenu CreateContextMenu(Style menuItemStyle, int presetId, string presetName)
-        {
-            var contextMenu = new ContextMenu();
-
-            var renameItem = new MenuItem();
-            contextMenu.Items.Add(renameItem);
-            renameItem.Header = "Rename";
-            renameItem.Style = menuItemStyle;
-            renameItem.Click += (s, e) =>
-            {
-                string name = Dialogs.InputDialog(presetName, "Rename");
-                if (name != null && name != presetName)
-                {
-                    Config.RenamePreset(presetId, name);
-                    Config.SafeSave();
-                    UpdatePresets();
-                }
-            };
-
-            var deleteItem = new MenuItem();
-            contextMenu.Items.Add(deleteItem);
-            deleteItem.Header = "Delete";
-            deleteItem.Style = menuItemStyle;
-            deleteItem.Click += (s, e) =>
-            {
-                var confirm = Dialogs.ConfirmDialog($"Delete {presetName}?", "Delete");            
-                if (confirm)
-                {
-                    int activeId = Config.GetActivePresetId();
-                    Config.DeletePreset(presetId);
-                    Config.SafeSave();
-                    UpdatePresets();
-                    if (activeId == presetId)
-                    {
-                        _viewModel.OnDisplaySettingsChanged(null, null);
-                    }
-                }
-            };   
-            
-            return contextMenu;
-        }
-
-        private void UpdatePresets()
-        {
-            var menuItemStyle = (Style)FindResource("MenuItemStyle");
-
-            var presets = Config.GetPresetNames();
-            var activePreset = Config.GetActivePresetId();
-
-            var items = new List<ComboBoxItem>();
-
-            for (int i = 0; i < presets.Length; i++)
-            {
-                int presetId = i;
-                var presetName = presets[i];
-
-                var contextMenu = CreateContextMenu(menuItemStyle, presetId, presetName);
-
-                var item = new ComboBoxItem();
-                item.Content = presetName;
-                item.ContextMenu = contextMenu;
-                item.Selected += (s, e) =>
-                {
-                    if (presetId != Config.GetActivePresetId())
-                    {
-                        Config.SetActivePreset(presetId);
-                        Config.SafeSave();
-                        _viewModel.OnDisplaySettingsChanged(null, null);
-                    }
-                };
-
-                items.Add(item);
-            }
-
-            var addNewItem = new ComboBoxItem();
-            addNewItem.Content = "+";           
-            items.Add(addNewItem);
-
-            Presets.ItemsSource = items;
-            Presets.SelectedIndex = activePreset;
-        }
-
-        private void Presets_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (Presets.SelectedIndex == Presets.Items.Count - 1)
-            {
-                Presets.SelectedIndex = -1;
-                Config.AddPreset();
-                Config.SafeSave();
-                UpdatePresets();
-            }
         }
 
         private void ReapplyMonitorSettings()
