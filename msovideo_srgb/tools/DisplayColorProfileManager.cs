@@ -250,7 +250,14 @@ namespace msovideo_srgb
                 return null;
             }
 
-            var luidAndSource = FindAdapterAndSource(display.DevicePath);
+            var adapterAndSourceIds = DisplayConfigManager.FindAdapterAndSourceIds();
+
+            if (!adapterAndSourceIds.ContainsKey(display.DevicePath))
+            {
+                return null;
+            }
+
+            var luidAndSource = adapterAndSourceIds[display.DevicePath];
 
             var outputCapabilities = new WCS_DEVICE_MHC2_CAPABILITIES();
             int hr = ColorProfileGetDeviceCapabilities(

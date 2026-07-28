@@ -66,14 +66,19 @@ namespace msovideo_srgb
 
         internal static Dictionary<string, Tuple<LUID, uint>> FindAdapterAndSourceIds()
         {
-            Check(GetDisplayConfigBufferSizes(QDC.QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount));
+            var map = new Dictionary<string, Tuple<LUID, uint>>();
+
+            int hr = GetDisplayConfigBufferSizes(QDC.QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount);
+
+            if (hr != 0) return map;
 
             var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
             var modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
 
-            Check(QueryDisplayConfig(QDC.QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero));
+            hr = QueryDisplayConfig(QDC.QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero);
 
-            var map = new Dictionary<string, Tuple<LUID, uint>>();
+            if (hr != 0) return map;
+
             foreach (var path in paths)
             {
                 var source = path.sourceInfo;
@@ -85,7 +90,10 @@ namespace msovideo_srgb
                 targetName.header.adapterId = target.adapterId;
                 targetName.header.id = target.id;
 
-                Check(DisplayConfigGetDeviceInfo(ref targetName));
+                hr = DisplayConfigGetDeviceInfo(ref targetName);
+
+                if (hr != 0) continue;
+
                 map.Add(targetName.monitorDevicePath, Tuple.Create(source.adapterId, source.id));
             }
 

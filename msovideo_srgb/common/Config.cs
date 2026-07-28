@@ -217,9 +217,15 @@ namespace msovideo_srgb
                     }
                     else
                     {
-                        var val = attribute.Value;
-                        var converted = Convert.ChangeType(val, prop.PropertyType);
-                        prop.SetValue(obj, converted);
+                        try
+                        {
+                            var val = attribute.Value;
+                            var converted = Convert.ChangeType(val, prop.PropertyType);
+                            prop.SetValue(obj, converted);
+                        }catch (Exception ex)
+                        {
+                            prop.SetValue(obj, persistent.DefaultValue);
+                        }
                     }
                 }
             }

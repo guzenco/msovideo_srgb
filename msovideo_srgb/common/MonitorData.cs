@@ -35,6 +35,8 @@ namespace msovideo_srgb
             MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2));
             MHCProfileName = new string(MHCProfileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
             HdrActive = hdrActive;
+            IsSupportMHC2 = DisplayColorProfileManager.IsSupportMHC2(Display);
+            IsUnique = DisplayColorProfileManager.IsDisplaySourceIdUnique(Display);
 
             if (Edid != null)
             {
@@ -89,6 +91,8 @@ namespace msovideo_srgb
         public Display Display { get; }
         public string Path { get; }
         public bool HdrActive { get; }
+        public bool? IsSupportMHC2 { get; }
+        public bool IsUnique { get; }
         public string MHCProfileName { get; }
         public string MHCProfileNameSDR => "[SDR] " + MHCProfileName + ".icm";
         public string MHCProfileNameHDR => "[HDR] " + MHCProfileName + ".icm";
@@ -396,29 +400,25 @@ namespace msovideo_srgb
 
         public bool CanClampHDR => (UseIccHDR && ProfilePathHDR != "") || (OverrideMetadataHDR && !UseIccHDR);
 
-        public bool? IsSupportMHC2 => DisplayColorProfileManager.IsSupportMHC2(Display);
-
-        public bool IsUnique => DisplayColorProfileManager.IsDisplaySourceIdUnique(Display);
-
         public bool UseEdid
         {
             set => UseIcc = !value;
             get => !UseIcc;
         }
 
-        [Persistent("clamp")]
+        [Persistent("clamp", false)]
         public bool Clamp { get; set; }
 
-        [Persistent("target")]
+        [Persistent("target", 0)]
         public int Target { set; get; }
 
         [Persistent("resolution", 2)]
         public int Resolution { set; get; }
 
-        [Persistent("use_icc")]
+        [Persistent("use_icc", false)]
         public bool UseIcc { set; get; }
 
-        [Persistent("icc_path")]
+        [Persistent("icc_path", "")]
         public string ProfilePath { set; get; }
 
         [Persistent("limit_luminance", false)]
@@ -427,16 +427,16 @@ namespace msovideo_srgb
         [Persistent("max_luminance", 80)]
         public int MaxLuminance { set; get; }
 
-        [Persistent("calibrate_gamma")]
+        [Persistent("calibrate_gamma", false)]
         public bool CalibrateGamma { set; get; }
 
-        [Persistent("selected_gamma")]
+        [Persistent("selected_gamma", 0)]
         public int SelectedGamma { set; get; }
 
-        [Persistent("custom_gamma")]
+        [Persistent("custom_gamma", 2.2)]
         public double CustomGamma { set; get; }
 
-        [Persistent("custom_percentage")]
+        [Persistent("custom_percentage", 100)]
         public double CustomPercentage { set; get; }
 
         [Persistent("use_vcgt", false)]

@@ -39,8 +39,6 @@ namespace msovideo_srgb
                     adapter.GetDesc1(out adesc);
                     if (adesc.AdapterLuid.Equals(adapterId))
                     {
-                        Console.WriteLine(adapterIndex + "\t" + adesc.AdapterLuid);
-
                         uint outputIndex = 0;
                         IDXGIOutput output;
                         while (adapter.EnumOutputs(outputIndex, out output) == 0)
