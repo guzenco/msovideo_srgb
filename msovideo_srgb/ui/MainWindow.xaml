@@ -109,17 +109,17 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding ActivePreset, Mode=TwoWay}" DisplayMemberPath="Name" VerticalAlignment="Bottom" HorizontalContentAlignment="Center">
+        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding ActivePreset, Mode=TwoWay}" VerticalAlignment="Bottom" HorizontalContentAlignment="Stretch">
             <ComboBox.ItemContainerStyle>
                 <Style TargetType="ComboBoxItem">
-                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                    <Setter Property="Padding" Value="1,1,17,1"/>
+                    <Setter Property="Padding" Value="5,0,21.5,0"/>
                     <Setter Property="BorderThickness" Value="0,0.25,0,0"/>
                     <Setter Property="BorderBrush" Value="LightGray"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu>
                                 <MenuItem Header="Rename" Style="{StaticResource MenuItemStyle}" />
+                                <MenuItem Header="Hotkey" Style="{StaticResource MenuItemStyle}" />
                                 <MenuItem Header="Delete" Style="{StaticResource MenuItemStyle}" />
                             </ContextMenu>
                         </Setter.Value>
@@ -131,6 +131,14 @@
                     </Style.Triggers>
                 </Style>
             </ComboBox.ItemContainerStyle>
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding Hotkey}" HorizontalAlignment="Right" />
+                    </Grid>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
         </ComboBox>
         </Grid>
     </DockPanel>

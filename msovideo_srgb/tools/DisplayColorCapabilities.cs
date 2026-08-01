@@ -75,7 +75,7 @@ namespace msovideo_srgb
                 }
                 Marshal.ReleaseComObject(factory);
             }
-            catch (Exception ex) { }
+            catch (Exception) { }
             return null;
         }
     }

@@ -113,7 +113,21 @@ namespace msovideo_srgb
 
         public static int GetActivePresetId()
         {
-            return (int?)config.Attribute("active_preset") ?? 0;
+            int activePresetId = SafeGetAtributeValue(config, "active_preset", -1);
+            var presets = GetPresets();
+
+            if (activePresetId >= presets.Length || activePresetId < 0)
+            {
+                if(presets.Length == 0)
+                {
+                    AddPreset();
+                }
+
+                SetActivePreset(0);
+                return 0;
+            }
+
+            return activePresetId;
         }
 
         public static void SetActivePreset(int presetId)
@@ -121,16 +135,30 @@ namespace msovideo_srgb
             config.SetAttributeValue("active_preset", presetId);
         }
 
-        public static string[] GetPresetNames()
+        private static Hotkey GetHotkey(XElement element)
+        {
+            uint keyModifier = SafeGetAtributeValue<uint>(element, "hotkey_key_modifier", 0);
+            uint virtualKey = SafeGetAtributeValue<uint>(element, "hotkey_virtual_key", 0);
+            return new Hotkey(keyModifier, virtualKey);     
+        }
+
+        private static void SetHotkey(XElement element, Hotkey hotkey)
+        {
+            element.SetAttributeValue("hotkey_key_modifier", (uint)hotkey.KeyModifier);
+            element.SetAttributeValue("hotkey_virtual_key", (uint)hotkey.VirtualKey);
+        }
+
+        public static Preset[] GetAllPresets()
         {
             var presets = GetPresets();
-            string[] presetNames = new string[presets.Length];
+            Preset[] presetNames = new Preset[presets.Length];
 
             for (int i = 0; i < presets.Length; i++)
             {
                 var preset = presets[i];
-                var name = preset.Attribute("name").Value;
-                presetNames[i] = name;
+                var name = SafeGetAtributeValue(preset, "name", "<unknown preset>");
+                var hotkey = GetHotkey(preset);
+                presetNames[i] = new Preset(i, name, hotkey);
             }
 
             return presetNames;
@@ -142,13 +170,19 @@ namespace msovideo_srgb
             preset.SetAttributeValue("name", name);
         }
 
+        public static void SetPresetHotkey(int presetId, Hotkey hotkey)
+        {
+            var preset = GetPreset(presetId);
+            SetHotkey(preset, hotkey);
+        }
+
         public static void DeletePreset(int presetId)
         {
             var preset = GetPreset(presetId);
             preset.Remove();
             
-            var presets = GetPresets();
             var activePreset = GetActivePresetId();
+            var presets = GetPresets();
 
             if (activePreset <= presetId)
             {
@@ -160,11 +194,6 @@ namespace msovideo_srgb
             }
 
             SetActivePreset(activePreset);
-            
-            if(presets.Length == 0)
-            {
-                AddPreset();
-            }
         }
 
         public static void AddPreset()
@@ -186,6 +215,31 @@ namespace msovideo_srgb
             config.Add(newConfigurection);
 
             SetActivePreset(presets.Length);
+        }
+
+        private static T SafeGetAtributeValue<T>(XElement element, string attributeName, T defaultValue)
+        {
+            return (T)SafeGetAtributeValue(element, attributeName, typeof(T), defaultValue);
+        }
+
+        private static object SafeGetAtributeValue(XElement element, string attributeName, Type type, object defaultValue)
+        {
+            var attribute = element.Attribute(attributeName);
+
+            if (attribute == null) {
+                return defaultValue;
+            }
+
+            try
+            {
+                var val = attribute.Value;
+                object converted = Convert.ChangeType(val, type);
+                return converted;
+            }
+            catch (Exception)
+            {
+                return defaultValue;
+            }
         }
 
         private static XElement SaveO<T>(T obj, XElement element)
@@ -211,23 +265,8 @@ namespace msovideo_srgb
                 
                 if (persistent != null)
                 {
-                    var attribute = element.Attribute(persistent.Key);
-                    if (attribute == null)
-                    {
-                        prop.SetValue(obj, persistent.DefaultValue);
-                    }
-                    else
-                    {
-                        try
-                        {
-                            var val = attribute.Value;
-                            var converted = Convert.ChangeType(val, prop.PropertyType);
-                            prop.SetValue(obj, converted);
-                        }catch (Exception ex)
-                        {
-                            prop.SetValue(obj, persistent.DefaultValue);
-                        }
-                    }
+                    var val = SafeGetAtributeValue(element, persistent.Key, prop.PropertyType, persistent.DefaultValue);
+                    prop.SetValue(obj, val);
                 }
             }
         }

@@ -29,6 +29,7 @@ namespace msovideo_srgb
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
 
             GlobalEventsObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
+            GlobalEventsObserver.OnHotKey += _viewModel.OnHotkey;
 
             var args = Environment.GetCommandLineArgs().ToList();
             args.RemoveAt(0);
@@ -90,9 +91,10 @@ namespace msovideo_srgb
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem menuItem && menuItem.DataContext is MainViewModel.Preset preset)
+            if (sender is MenuItem menuItem && menuItem.DataContext is Preset preset)
             {
-                if (menuItem.Header.ToString() == "Rename")
+                string action = menuItem.Header.ToString();
+                if (action == "Rename")
                 {
                     string name = Dialogs.InputDialog(preset.Name, "Rename");
                     if (name != null && name != preset.Name)
@@ -100,7 +102,22 @@ namespace msovideo_srgb
                         _viewModel.RenamePreset(preset, name);
                     }
                 }
-                else if (menuItem.Header.ToString() == "Delete")
+                else if (action == "Hotkey")
+                {
+                    var hotkey = Dialogs.HotkeyDialog(preset.Hotkey, preset.Name);
+                    if (hotkey != null && !hotkey.Equals(preset.Hotkey))
+                    {
+                        if (!_viewModel.Presets.Any(p => hotkey.IsBindable && hotkey.Equals(p.Hotkey)))
+                        {
+                            _viewModel.SetPresetHotkey(preset, hotkey);
+                        }
+                        else
+                        {
+                            Dialogs.NotifyDialog($"{hotkey} already used!", preset.Name);
+                        }
+                    }
+                }
+                else if (action == "Delete")
                 {
                     var confirm = Dialogs.ConfirmDialog($"Delete {preset.Name}?", "Delete");
                     if (confirm)

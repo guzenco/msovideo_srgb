@@ -95,6 +95,7 @@
     <Compile Include="colorimetry\ST2084.cs" />
     <Compile Include="common\Attributes.cs" />
     <Compile Include="common\Hotkey.cs" />
+    <Compile Include="common\Preset.cs" />
     <Compile Include="icc\ICCProfileGenerator.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />
     <Compile Include="common\Config.cs" />

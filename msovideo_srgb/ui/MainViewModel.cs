@@ -129,14 +129,19 @@ namespace msovideo_srgb
         private void UpdatePresets()
         {
             Presets.Clear();
+            GlobalEventsObserver.ClearHotKeys();
 
-            var presets = Config.GetPresetNames();
-            for (int i = 0; i < presets.Length; i++)
+            var presets = Config.GetAllPresets();
+            foreach (var preset in presets)
             {
-                Presets.Add(new Preset { Id = i, Name = presets[i] });
+                Presets.Add(preset);
+                if (preset.Hotkey.IsBindable)
+                {
+                    GlobalEventsObserver.AddHotKey(preset.Id, preset.Hotkey);
+                }
             }
 
-            Presets.Add(new Preset { Id = -1, Name = "+" });
+            Presets.Add(new Preset (-1, "+"));
 
             OnPropertyChanged(nameof(ActivePreset));
         }
@@ -160,6 +165,13 @@ namespace msovideo_srgb
             {
                UpdateMonitors();
             }
+        }
+
+        public void SetPresetHotkey(Preset preset, Hotkey hotkey)
+        {
+            Config.SetPresetHotkey(preset.Id, hotkey);
+            Config.SafeSave();
+            UpdatePresets();
         }
 
         public void ReapplyAll()
@@ -186,6 +198,11 @@ namespace msovideo_srgb
             OnDisplaySettingsChanged(null, null);
         }
 
+        public void OnHotkey(int id)
+        {
+            ActivePreset = Presets[id];
+        }
+
         public void SaveConfig()
         {    
             foreach (var m in Monitors)
@@ -199,12 +216,6 @@ namespace msovideo_srgb
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        public class Preset
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
         }
     }
 }
