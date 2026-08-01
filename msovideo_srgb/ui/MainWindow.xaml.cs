@@ -23,20 +23,12 @@ namespace msovideo_srgb
 
         public MainWindow()
         {
-            if (Process.GetProcessesByName(Process.GetCurrentProcess().ProcessName).Length > 1)
-            {
-                MessageBox.Show("Already running!");
-                Close();
-                return;
-            }
-
             InitializeComponent();
             _viewModel = (MainViewModel)DataContext;
             SystemEvents.DisplaySettingsChanged += _viewModel.OnDisplaySettingsChanged;
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
 
-            DisplayStateObserver.Init();
-            DisplayStateObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
+            GlobalEventsObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
 
             var args = Environment.GetCommandLineArgs().ToList();
             args.RemoveAt(0);

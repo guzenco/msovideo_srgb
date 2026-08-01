@@ -94,12 +94,14 @@
     <Compile Include="colorimetry\ScaledToneCurve.cs" />
     <Compile Include="colorimetry\ST2084.cs" />
     <Compile Include="common\Attributes.cs" />
+    <Compile Include="common\Hotkey.cs" />
     <Compile Include="icc\ICCProfileGenerator.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />
     <Compile Include="common\Config.cs" />
     <Compile Include="tools\DisplayColorCapabilities.cs" />
     <Compile Include="tools\DisplayColorProfileManager.cs" />
-    <Compile Include="tools\DisplayStateObserver.cs" />
+    <Compile Include="tools\EnumExtensions.cs" />
+    <Compile Include="tools\GlobalEventsObserver.cs" />
     <Compile Include="ui\AboutWindow.xaml.cs">
       <DependentUpon>AboutWindow.xaml</DependentUpon>
     </Compile>

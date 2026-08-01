@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Windows;
 using System.Xml.Linq;
 
 namespace msovideo_srgb
@@ -19,8 +20,8 @@ namespace msovideo_srgb
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
-                Environment.Exit(1);
+                MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
+                Application.Current.Shutdown();
             }
         }
 
@@ -63,8 +64,8 @@ namespace msovideo_srgb
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
-                Environment.Exit(1);
+                MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
+                Application.Current.Shutdown();
             }
         }
 
