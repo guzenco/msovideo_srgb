@@ -212,6 +212,7 @@ namespace msovideo_srgb
             }
 
             newConfigurection.SetAttributeValue("name", $"Preset {presets.Length + 1}");
+            SetHotkey(newConfigurection, new Hotkey());
             config.Add(newConfigurection);
 
             SetActivePreset(presets.Length);

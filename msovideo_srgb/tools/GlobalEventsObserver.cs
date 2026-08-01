@@ -46,13 +46,14 @@ namespace msovideo_srgb
             _hotKeyIds.Clear();
         }
 
-        public static void AddHotKey(int id, Hotkey hotkey)
+        public static void AddHotKey(int id, Hotkey hotkey, bool noRepeat = true)
         {
             if (_hotKeyIds.Contains(id))
             {
                 UnregisterHotKey(_hwndSource.Handle, id);
             }
-            RegisterHotKey(_hwndSource.Handle, id, (uint)hotkey.KeyModifier, (uint)hotkey.VirtualKey);
+            uint fsModifiers = noRepeat ? (uint)KeyModifierBase.NoRepeat : 0;
+            RegisterHotKey(_hwndSource.Handle, id, fsModifiers | (uint)hotkey.KeyModifier, (uint)hotkey.VirtualKey);
             _hotKeyIds.Add(id);
         }
 

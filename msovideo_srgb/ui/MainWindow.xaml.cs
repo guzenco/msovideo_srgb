@@ -104,7 +104,7 @@ namespace msovideo_srgb
                 }
                 else if (action == "Hotkey")
                 {
-                    var hotkey = Dialogs.HotkeyDialog(preset.Hotkey, preset.Name);
+                    var hotkey = Dialogs.HotkeyDialog(preset.Hotkey, $"{preset.Name}: ", "Press or select hotkey");
                     if (hotkey != null && !hotkey.Equals(preset.Hotkey))
                     {
                         if (!_viewModel.Presets.Any(p => hotkey.IsBindable && hotkey.Equals(p.Hotkey)))
@@ -113,7 +113,7 @@ namespace msovideo_srgb
                         }
                         else
                         {
-                            Dialogs.NotifyDialog($"{hotkey} already used!", preset.Name);
+                            Dialogs.NotifyDialog($"{hotkey}\nAlready used!", preset.Name);
                         }
                     }
                 }

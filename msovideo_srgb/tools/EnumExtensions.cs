@@ -13,6 +13,12 @@ namespace msovideo_srgb
             return attr?.Description ?? value.ToString();
         }
 
+        public static bool IsDefined(this Enum value)
+        {
+            Type enumType = value.GetType();
+            return Enum.IsDefined(enumType, value);
+        }
+
         public static T[] ToArray<T>() where T : Enum
         {
             return (T[])Enum.GetValues(typeof(T));
