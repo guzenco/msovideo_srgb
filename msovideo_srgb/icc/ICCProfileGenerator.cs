@@ -357,15 +357,25 @@ namespace msovideo_srgb
 
             if (File.Exists(path))
             {
-                byte[] existingData = File.ReadAllBytes(path);
-
-                if (existingData.Length == profileData.Length && existingData.SequenceEqual(profileData))
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    return;
+                    byte[] existingData = new byte[fs.Length];
+
+                    if (existingData.Length == profileData.Length) {
+                        fs.Read(existingData, 0, existingData.Length);
+
+                        if (existingData.SequenceEqual(profileData))
+                        {
+                            return;
+                        }
+                    }
                 }
             }
 
-            File.WriteAllBytes(path, profileData);
+            using (FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+            {
+                fs.Write(profileData, 0, profileData.Length);
+            }
         }
 
         public static bool IsGeneratedByThis(string profileName)
@@ -374,12 +384,12 @@ namespace msovideo_srgb
 
             if (File.Exists(path))
             {
-                using (FileStream reader = File.OpenRead(path))
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
                     byte[] buffer = new byte[4];
                     
-                    reader.Seek(80, SeekOrigin.Begin);  
-                    int size = reader.Read(buffer, 0, 4);
+                    fs.Seek(80, SeekOrigin.Begin);  
+                    int size = fs.Read(buffer, 0, 4);
 
                     if (size != 4) return false;
 

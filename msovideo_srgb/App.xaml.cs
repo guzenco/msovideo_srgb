@@ -25,6 +25,8 @@ namespace msovideo_srgb
                 return;
             }
 
+            base.OnStartup(e);
+
             var mainWindow = new MainWindow();
             mainWindow.Show();
         }

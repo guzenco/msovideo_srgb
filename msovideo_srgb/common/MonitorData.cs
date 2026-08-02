@@ -101,6 +101,16 @@ namespace msovideo_srgb
 
         public const string MHCProfileNamePattern = @"^\[(?:SDR|HDR)\]\s.+#[^\s]+(?:\.icm| default\.icm)$";
         
+        public void ScheduleCreateProfile(Action createProfile)
+        {
+            ActionScheduler.Add(Path, createProfile, HandleClampException);
+        }
+
+        private void ScheduleApplyProfile(string profileName, bool hdr)
+        {
+            ActionScheduler.Add(Path, () => ApplyProfile(profileName, hdr), HandleClampException);
+        }
+
         private void ApplyProfile(string profileName, bool hdr)
         {
             ColorProfileFactory.CreateProfile(MHCProfileNameReset, CurveResolution);
@@ -134,6 +144,11 @@ namespace msovideo_srgb
                     DisplayColorProfileManager.RemoveAssociation(Display, profileName, hdr);
                 }
             }
+        }
+
+        private void ScheduleRemoveWrongProfileAssociations()
+        {
+            ActionScheduler.Add(Path, () => RemoveWrongProfileAssociations(), HandleClampException);
         }
 
         private void RemoveWrongProfileAssociations()
@@ -179,17 +194,14 @@ namespace msovideo_srgb
             }
         }
 
-        private void UpdateClamp(bool doClamp)
+        private void ScheduleUnapplyProfile(bool clamped, bool doClamp)
         {
-            var scope = DisplayColorProfileManager.GetDisplayUserScope(Display);
+            ActionScheduler.Add(Path, () => UnapplyProfiles(clamped, doClamp), HandleClampException);
+        }
 
-            if (scope == DisplayColorProfileManager.WcsProfileManagementScope.SystemWide)
-            {
-                DisplayColorProfileManager.SetDisplayUserScope(Display, DisplayColorProfileManager.WcsProfileManagementScope.CurrentUser);
-            }
-
-            RemoveWrongProfileAssociations();
-            if (_clamped || !doClamp)
+        private void UnapplyProfiles(bool clamped, bool doClamp)
+        {
+            if (clamped || !doClamp)
             {
                 UnapplyProfile(MHCProfileNameSDR, false, !doClamp || !(UseEdid || UseIcc));
                 UnapplyProfile(MHCProfileNameHDR, true, !doClamp || !(UseIccHDR || OverrideMetadataHDR));
@@ -205,16 +217,37 @@ namespace msovideo_srgb
                     UnapplyProfile(MHCProfileNameHDR, true, true);
                 }
             }
+        }
+
+        private void UpdateClamp(bool doClamp)
+        {
+            ActionScheduler.Clear(Path);
+
+            var scope = DisplayColorProfileManager.GetDisplayUserScope(Display);
+
+            if (scope == DisplayColorProfileManager.WcsProfileManagementScope.SystemWide)
+            {
+                DisplayColorProfileManager.SetDisplayUserScope(Display, DisplayColorProfileManager.WcsProfileManagementScope.CurrentUser);
+            }
+
+            ScheduleRemoveWrongProfileAssociations();
+            ScheduleUnapplyProfile(_clamped, doClamp);
 
             if (!doClamp || !CanClamp) return;
 
             if (CanClampSDR)
             {
+                Action createProfile = null;
                 if (UseEdid)
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, TargetColorSpace, TargetWhitePoint,
-                        reportWhiteD65: ReportWhiteD65 || HdrActive,
-                        reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
-                        reportGammaSRGB: ReportGammaSRGB && !HdrActive);
+                {
+                    createProfile = () =>
+                    {
+                        ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, TargetColorSpace, TargetWhitePoint,
+                                reportWhiteD65: ReportWhiteD65 || HdrActive,
+                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
+                                reportGammaSRGB: ReportGammaSRGB && !HdrActive);
+                    };
+                }
                 else if (UseIcc)
                 {
                     var profile = ICCMatrixProfile.FromFile(ProfilePath);
@@ -269,7 +302,7 @@ namespace msovideo_srgb
                         if (HdrActive)
                         {
                             var colorCapabilities = DisplayColorCapabilities.GetColorCapabilities(Display);
-                            if(colorCapabilities != null)
+                            if (colorCapabilities != null)
                             {
                                 PeakLuminance = colorCapabilities?.PeakLuminance;
                                 MaxFullFrameLuminance = colorCapabilities?.MaxFullFrameLuminance;
@@ -282,25 +315,33 @@ namespace msovideo_srgb
                             MinLuminance = -1;
                         }
                     }
-
-                    ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance,
-                            reportWhiteD65: ReportWhiteD65 || HdrActive,
-                            reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
-                            reportGammaSRGB: ReportGammaSRGB && !HdrActive,
-                            useVcgt: UseVcgt,
-                            optimizeMatrix: OptimizeMatrix,
-                            acmMode: HdrActive,
-                            gamma: gamma,
-                            peakLuminanceOverride: PeakLuminance,
-                            maxFullFrameLuminanceOverride: MaxFullFrameLuminance,
-                            minLuminanceOverride: MinLuminance);
+                    createProfile =() =>
+                    {
+                        ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance,
+                                reportWhiteD65: ReportWhiteD65 || HdrActive,
+                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
+                                reportGammaSRGB: ReportGammaSRGB && !HdrActive,
+                                useVcgt: UseVcgt,
+                                optimizeMatrix: OptimizeMatrix,
+                                acmMode: HdrActive,
+                                gamma: gamma,
+                                peakLuminanceOverride: PeakLuminance,
+                                maxFullFrameLuminanceOverride: MaxFullFrameLuminance,
+                                minLuminanceOverride: MinLuminance);
+                    };
                 }
 
-                ApplyProfile(MHCProfileNameSDR, false);
+                if (createProfile != null)
+                {
+                    ScheduleCreateProfile(createProfile);
+                    ScheduleApplyProfile(MHCProfileNameSDR, false);
+                }
             }
 
             if (CanClampHDR)
             {
+                Action createProfile = null;
+
                 if (UseIccHDR)
                 {
                     var profile = ICCMatrixProfile.FromFile(ProfilePathHDR);
@@ -320,20 +361,29 @@ namespace msovideo_srgb
                         gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, luminance, BPCThreshold);
                         luminance = profile.Luminance(matrixWhite, gamma);
                     }
+                    createProfile = () =>
+                    {
+                        ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, Colorimetry.Native, TargetWhitePointHDR, luminance,
+                                gamma: gamma,
+                                curve: new SrgbEOTF(),
+                                peakLuminanceOverride: OverrideMetadataHDR ? (double?)PeakLuminanceHDR : null,
+                                maxFullFrameLuminanceOverride: OverrideMetadataHDR ? (double?)MaxFullFrameLuminanceHDR : null,
+                                minLuminanceOverride: OverrideMetadataHDR ? (double?)MinLuminanceHDR : null);
+                    };
 
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, Colorimetry.Native, TargetWhitePointHDR, luminance,
-                            gamma: gamma,
-                            curve: new SrgbEOTF(),
-                            peakLuminanceOverride: OverrideMetadataHDR ? (double?)PeakLuminanceHDR : null,
-                            maxFullFrameLuminanceOverride: OverrideMetadataHDR ? (double?)MaxFullFrameLuminanceHDR : null,
-                            minLuminanceOverride: OverrideMetadataHDR ? (double?)MinLuminanceHDR : null);
-
-                    ApplyProfile(MHCProfileNameHDR, true);
                 }
                 else if (OverrideMetadataHDR)
                 {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, PeakLuminanceHDR, MaxFullFrameLuminanceHDR, MinLuminanceHDR);
-                    ApplyProfile(MHCProfileNameHDR, true);
+                    createProfile = () =>
+                    {
+                        ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, PeakLuminanceHDR, MaxFullFrameLuminanceHDR, MinLuminanceHDR);
+                    };
+                }
+
+                if(createProfile != null)
+                {
+                    ScheduleCreateProfile(createProfile);
+                    ScheduleApplyProfile(MHCProfileNameHDR, true);
                 }
             }   
         }
@@ -342,11 +392,14 @@ namespace msovideo_srgb
         {
             try
             {
+                ActionScheduler.Clear(Path);
                 if (e is DisplayNotFoundException) return;
                 MessageBox.Show(e.Message);
                 _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
                 Clamp = _clamped;
-                OnPropertyChanged(nameof(Clamped));
+                Application.Current.Dispatcher.Invoke(new Action(() => {
+                    OnPropertyChanged(nameof(Clamped));
+                })); 
             }
             catch { }
             finally

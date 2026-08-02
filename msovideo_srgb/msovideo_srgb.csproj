@@ -103,6 +103,7 @@
     <Compile Include="tools\DisplayColorProfileManager.cs" />
     <Compile Include="tools\EnumExtensions.cs" />
     <Compile Include="tools\GlobalEventsObserver.cs" />
+    <Compile Include="tools\ActionScheduler.cs" />
     <Compile Include="ui\AboutWindow.xaml.cs">
       <DependentUpon>AboutWindow.xaml</DependentUpon>
     </Compile>
