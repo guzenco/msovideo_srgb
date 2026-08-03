@@ -8,8 +8,6 @@ namespace msovideo_srgb
 {
     public static class DisplayColorProfileManager
     {
-        private static readonly object _lock = new object();
-
         internal const uint CLASS_MONITOR = 0x6D6E7472;
 
         public enum WcsProfileManagementScope : uint
@@ -140,14 +138,6 @@ namespace msovideo_srgb
 
         public static void AddAssociation(Display display, string profileName, bool hdr)
         {
-            lock (_lock)
-            {
-                AddAssociationUnafe(display, profileName, hdr);
-            }
-        }
-
-        public static void AddAssociationUnafe(Display display, string profileName, bool hdr)
-        {
             var luidAndSource = FindAdapterAndSource(display.DevicePath);
             int hr = ColorProfileAddDisplayAssociation(
                 WcsProfileManagementScope.CurrentUser,
@@ -161,14 +151,6 @@ namespace msovideo_srgb
         }
 
         public static void RemoveAssociation(Display display, string profileName, bool hdr)
-        {
-            lock (_lock)
-            {
-                RemoveAssociationUnafe(display, profileName, hdr);
-            }
-        }
-
-        public static void RemoveAssociationUnafe(Display display, string profileName, bool hdr)
         {
             var luidAndSource = FindAdapterAndSource(display.DevicePath);
             int hr = ColorProfileRemoveDisplayAssociation(
@@ -217,14 +199,6 @@ namespace msovideo_srgb
         }
 
         public static void SetProfile(Display display, string profileName, bool hdr)
-        {
-            lock (_lock)
-            {
-                SetProfileUnsafe(display, profileName, hdr);
-            }
-        }
-
-        public static void SetProfileUnsafe(Display display, string profileName, bool hdr)
         {
             var luidAndSource = FindAdapterAndSource(display.DevicePath);
 

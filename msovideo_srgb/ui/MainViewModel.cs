@@ -106,6 +106,7 @@ namespace msovideo_srgb
 
         private void UpdateMonitors()
         {
+            ActionScheduler.ClearAll();
             Monitors.Clear();
 
             var hdrPaths = DisplayConfigManager.GetHdrDisplayPaths();
@@ -128,8 +129,8 @@ namespace msovideo_srgb
         
         private void UpdatePresets()
         {
-            Presets.Clear();
             GlobalEventsObserver.ClearHotKeys();
+            Presets.Clear();
 
             var presets = Config.GetAllPresets();
             foreach (var preset in presets)

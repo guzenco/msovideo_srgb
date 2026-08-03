@@ -222,6 +222,7 @@ namespace msovideo_srgb
         private void UpdateClamp(bool doClamp)
         {
             ActionScheduler.Clear(Path);
+            ActionScheduler.SetPriority(Path, -Number);
 
             var scope = DisplayColorProfileManager.GetDisplayUserScope(Display);
 
