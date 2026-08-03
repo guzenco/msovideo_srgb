@@ -7,24 +7,23 @@ namespace msovideo_srgb
 {
     public static class GlobalEventsObserver
     {
+        public static event EventHandler OnSessionUnlock;
         public static event EventHandler OnDisplayWake;
         public static event Action<int> OnHotKey;
 
         private static IntPtr _hPowerNotify;
         private static HashSet<int> _hotKeyIds;
 
-        private static HwndSource _hwndSource = InitHwndSource();
+        private static HwndSource _hwndSource;
 
-        private static HwndSource InitHwndSource()
+        static GlobalEventsObserver()
         {
-            HwndSource hwndSource;
             HwndSourceParameters parameters = new HwndSourceParameters() { WindowStyle = 0, ParentWindow = new IntPtr(-3) };
-            hwndSource = new HwndSource(parameters);    
-            hwndSource.AddHook(WndProc);
-            _hPowerNotify = RegisterPowerSettingNotification(hwndSource.Handle, ref GUID_CONSOLE_DISPLAY_STATE, 0);
+            _hwndSource = new HwndSource(parameters);
+            _hwndSource.AddHook(WndProc);
+            _hPowerNotify = RegisterPowerSettingNotification(_hwndSource.Handle, ref GUID_CONSOLE_DISPLAY_STATE, 0);
             _hotKeyIds = new HashSet<int>();
-            App.OnAppExit += OnExit;
-            return hwndSource;
+            App.CurrentApp.OnAppExit += OnExit;
         }       
 
         private static void OnExit(object sender, EventArgs e)
@@ -108,9 +107,15 @@ namespace msovideo_srgb
             else if (msg == WM_WTSSESSION_CHANGE)
             {
                 int reason = wParam.ToInt32();
-                if (reason == WTS_SESSION_LOGON || reason == WTS_SESSION_UNLOCK)
+
+                if (reason == WTS_SESSION_UNLOCK)
                 {
+                    if (_hPowerNotify != IntPtr.Zero)
+                    {
+                        UnregisterPowerSettingNotification(_hPowerNotify);
+                    }
                     RegisterPowerSettingNotification(hwnd, ref GUID_CONSOLE_DISPLAY_STATE, 0);
+                    OnSessionUnlock?.Invoke(null, null);
                 }
             }
             else if (msg == WM_HOTKEY)

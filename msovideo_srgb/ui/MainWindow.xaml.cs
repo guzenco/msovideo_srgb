@@ -29,6 +29,7 @@ namespace msovideo_srgb
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
 
             GlobalEventsObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
+            GlobalEventsObserver.OnSessionUnlock += _viewModel.OnDisplaySettingsChanged;
             GlobalEventsObserver.OnHotKey += _viewModel.OnHotkey;
 
             var args = Environment.GetCommandLineArgs().ToList();

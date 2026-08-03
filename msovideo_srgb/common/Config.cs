@@ -21,7 +21,8 @@ namespace msovideo_srgb
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
-                Application.Current.Shutdown();
+                App.CurrentApp.OnExit();
+                Environment.Exit(1);
             }
         }
 
@@ -65,7 +66,8 @@ namespace msovideo_srgb
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message + "\n\nTry extracting the program elsewhere.");
-                Application.Current.Shutdown();
+                App.CurrentApp.OnExit();
+                Environment.Exit(1);
             }
         }
 

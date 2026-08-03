@@ -14,7 +14,9 @@ namespace msovideo_srgb
     /// </summary>
     public partial class App : Application
     {
-        public static event EventHandler OnAppExit;
+        public event EventHandler OnAppExit;
+
+        public static App CurrentApp => Current as App;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -27,14 +29,23 @@ namespace msovideo_srgb
 
             base.OnStartup(e);
 
-            var mainWindow = new MainWindow();
-            mainWindow.Show();
+            MainWindow = new MainWindow();
+
+            if (MainWindow.WindowState == WindowState.Normal)
+            {
+                MainWindow.Show();
+            }
+        }
+
+        public void OnExit()
+        {
+            OnAppExit?.Invoke(null, null);
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
-            OnAppExit?.Invoke(null, null);
             base.OnExit(e);
+            OnExit();
         }
     }
 }

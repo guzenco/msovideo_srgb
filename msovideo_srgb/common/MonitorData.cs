@@ -398,9 +398,9 @@ namespace msovideo_srgb
                 MessageBox.Show(e.Message);
                 _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
                 Clamp = _clamped;
-                Application.Current.Dispatcher.Invoke(new Action(() => {
+                Application.Current.Dispatcher.Invoke(() => {
                     OnPropertyChanged(nameof(Clamped));
-                })); 
+                }); 
             }
             catch { }
             finally

@@ -61,18 +61,12 @@ namespace msovideo_srgb
                     _priorities.Add(taskId, int.MinValue);
                 }
 
-                ScheduledAction scheduledAction = new ScheduledAction(action, exceptionHandler);
-
                 if (!_actions.ContainsKey(taskId))
                 {
-                    Queue<ScheduledAction> queue = new Queue<ScheduledAction>();
-                    queue.Enqueue(scheduledAction);
-                    _actions.Add(taskId, queue);
+                    _actions.Add(taskId, new Queue<ScheduledAction>());
                 }
-                else
-                {
-                    _actions[taskId].Enqueue(scheduledAction);
-                }
+
+                _actions[taskId].Enqueue(new ScheduledAction(action, exceptionHandler));
 
                 if (_executor == null)
                 {
