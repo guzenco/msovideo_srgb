@@ -32,16 +32,70 @@ namespace msovideo_srgb
             GlobalEventsObserver.OnSessionUnlock += _viewModel.OnDisplaySettingsChanged;
             GlobalEventsObserver.OnHotKey += _viewModel.OnHotkey;
 
+            ProcessArgs();
+
+            InitializeTrayIcon();
+        }
+
+        private void ProcessArgs()
+        {
             var args = Environment.GetCommandLineArgs().ToList();
             args.RemoveAt(0);
 
-            if (args.Contains("-minimize"))
+            string helpMessage = "";
+            bool autoclose = false;
+            foreach (var arg in args)
             {
-                WindowState = WindowState.Minimized;
-                Hide();
+                if (arg.Equals("-minimize", StringComparison.OrdinalIgnoreCase))
+                {
+                    WindowState = WindowState.Minimized;
+                    Hide();
+                }
+                else if (arg.Equals("-autoclose", StringComparison.OrdinalIgnoreCase))
+                {
+                    WindowState = WindowState.Minimized;
+                    Hide();
+                    autoclose = true;
+                }
+                else if (arg.StartsWith("-preset=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string val = arg.Substring("-preset=".Length);
+                    if (int.TryParse(val, out int presetId))
+                    {
+                        presetId--;
+                        presetId = Math.Max(presetId, 0);
+                        presetId = Math.Min(presetId, _viewModel.Presets.Count - 1);
+                        _viewModel.ActivePreset = _viewModel.Presets[presetId];
+                    }
+                    else
+                    {
+                        helpMessage += $"Must be a number: {val}\n";
+                    }
+                }
+                else if (arg.Equals("-force", StringComparison.OrdinalIgnoreCase));
+                else
+                {
+                    helpMessage += $"Unknown argument: {arg}\n";
+                }
             }
+            if (helpMessage != "")
+            {
+                helpMessage += "\n";
+                helpMessage += "-force\t\tClose other instances at startup\n";
+                helpMessage += "-minimize\tMinimize at startup\n";
+                helpMessage += "-autoclose\tClose after startup\n";
+                helpMessage += "-preset=<id>\tSet preset #<id> at startup";
 
-            InitializeTrayIcon();
+                MessageBox.Show(helpMessage);
+            }
+            if (autoclose)
+            {
+                ActionScheduler.Add("autoclose", () =>
+                {
+                    App.CurrentApp.OnExit();
+                    Environment.Exit(1);
+                });
+            }
         }
 
         protected override void OnStateChanged(EventArgs e)

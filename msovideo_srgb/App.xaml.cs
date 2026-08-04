@@ -20,11 +20,30 @@ namespace msovideo_srgb
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            if (Process.GetProcessesByName(Process.GetCurrentProcess().ProcessName).Length > 1)
+            var currentProcess = Process.GetCurrentProcess();
+            var appProcesses = Process.GetProcessesByName(currentProcess.ProcessName);
+
+            if (appProcesses.Length > 1)
             {
-                MessageBox.Show("Already running!");
-                Shutdown();
-                return;
+                bool force = e.Args.Any(x => x.Equals("-force", StringComparison.OrdinalIgnoreCase));
+                if (force)
+                {
+                    foreach(var appProcess in appProcesses)
+                    {                    
+                        if (appProcess.Id == currentProcess.Id) continue;
+
+                        if (!appProcess.CloseMainWindow())
+                        {
+                            appProcess.Kill();
+                        }
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Already running!");
+                    Shutdown();
+                    return;
+                }
             }
 
             base.OnStartup(e);
