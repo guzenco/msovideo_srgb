@@ -9,6 +9,7 @@ namespace msovideo_srgb
     {
         private static Dictionary<string, Queue<ScheduledAction>> _actions = new Dictionary<string, Queue<ScheduledAction>>();
         private static Dictionary<string, int> _priorities = new Dictionary<string, int>();
+        private static HashSet<string> _protected = new HashSet<string>();
 
         private static Task _executor;
 
@@ -90,6 +91,14 @@ namespace msovideo_srgb
             }
         }
 
+        public static void Protect(string taskId)
+        {
+            lock (_lock)
+            {
+                _protected.Add(taskId);
+            }
+        }
+
         public static void Clear(string taskId)
         {
             lock (_lock)
@@ -105,9 +114,10 @@ namespace msovideo_srgb
         {
             lock (_lock)
             {
-                foreach (var actions in _actions.Values)
+                foreach (var taskIds in _actions.Keys)
                 {
-                    actions.Clear();
+                    if (_protected.Contains(taskIds)) continue;
+                    _actions[taskIds].Clear();
                 }
             }
         }

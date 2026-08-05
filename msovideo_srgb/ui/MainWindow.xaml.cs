@@ -21,18 +21,23 @@ namespace msovideo_srgb
 
         private ContextMenuWF _contextMenu;
 
+        private bool _autoclose = false;
+
         public MainWindow()
         {
             InitializeComponent();
             _viewModel = (MainViewModel)DataContext;
+
+            ProcessArgs();
+
+            if (_autoclose) return;
+
             SystemEvents.DisplaySettingsChanged += _viewModel.OnDisplaySettingsChanged;
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
 
             GlobalEventsObserver.OnDisplayWake += _viewModel.OnDisplaySettingsChanged;
             GlobalEventsObserver.OnSessionUnlock += _viewModel.OnDisplaySettingsChanged;
             GlobalEventsObserver.OnHotKey += _viewModel.OnHotkey;
-
-            ProcessArgs();
 
             InitializeTrayIcon();
         }
@@ -43,7 +48,6 @@ namespace msovideo_srgb
             args.RemoveAt(0);
 
             string helpMessage = "";
-            bool autoclose = false;
             foreach (var arg in args)
             {
                 if (arg.Equals("-minimize", StringComparison.OrdinalIgnoreCase))
@@ -55,7 +59,7 @@ namespace msovideo_srgb
                 {
                     WindowState = WindowState.Minimized;
                     Hide();
-                    autoclose = true;
+                    _autoclose = true;
                 }
                 else if (arg.StartsWith("-preset=", StringComparison.OrdinalIgnoreCase))
                 {
@@ -88,8 +92,9 @@ namespace msovideo_srgb
 
                 MessageBox.Show(helpMessage);
             }
-            if (autoclose)
+            if (_autoclose)
             {
+                ActionScheduler.Protect("autoclose");
                 ActionScheduler.Add("autoclose", () =>
                 {
                     App.CurrentApp.OnExit();
