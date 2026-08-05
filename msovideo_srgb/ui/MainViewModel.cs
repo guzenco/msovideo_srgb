@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Input;
 using System.Xml.Linq;
@@ -34,6 +35,7 @@ namespace msovideo_srgb
             _startupValue = Application.ExecutablePath + " -minimize";
 
             Config.SafeLoad();
+            GlobalEventsObserver.Init();
 
             UpdatePresets();
             UpdateMonitors();
@@ -187,10 +189,20 @@ namespace msovideo_srgb
             catch (InvalidOperationException) { }
         }
 
+        private int _updateId = 0;
+        public void DelayedUpdateMonitors()
+        {
+            int id = ++_updateId;
+            Thread.Sleep(1000);
+            if (_updateId == id)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(UpdateMonitors);
+            }
+        }
+
         public void OnDisplaySettingsChanged(object sender, EventArgs e)
         {
-            Thread.Sleep(100);
-            UpdateMonitors();
+            Task.Run(DelayedUpdateMonitors);
         }
 
         public void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)

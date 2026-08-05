@@ -16,14 +16,17 @@ namespace msovideo_srgb
 
         private static HwndSource _hwndSource;
 
-        static GlobalEventsObserver()
+        public static void Init()
         {
-            HwndSourceParameters parameters = new HwndSourceParameters() { WindowStyle = 0, ParentWindow = new IntPtr(-3) };
-            _hwndSource = new HwndSource(parameters);
-            _hwndSource.AddHook(WndProc);
-            _hPowerNotify = RegisterPowerSettingNotification(_hwndSource.Handle, ref GUID_CONSOLE_DISPLAY_STATE, 0);
-            _hotKeyIds = new HashSet<int>();
-            App.CurrentApp.OnAppExit += OnExit;
+            if (_hwndSource == null)
+            {
+                HwndSourceParameters parameters = new HwndSourceParameters() { WindowStyle = 0, ParentWindow = new IntPtr(-3) };
+                _hwndSource = new HwndSource(parameters);
+                _hwndSource.AddHook(WndProc);
+                _hPowerNotify = RegisterPowerSettingNotification(_hwndSource.Handle, ref GUID_CONSOLE_DISPLAY_STATE, 0);
+                _hotKeyIds = new HashSet<int>();
+                App.CurrentApp.OnAppExit += OnExit;
+            }
         }       
 
         private static void OnExit(object sender, EventArgs e)
