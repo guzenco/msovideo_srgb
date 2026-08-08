@@ -109,7 +109,7 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding ActivePreset, Mode=TwoWay}" VerticalAlignment="Bottom" HorizontalContentAlignment="Stretch" Padding="20,3,3,3">
+        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding ActivePreset, Mode=TwoWay}" VerticalAlignment="Bottom" HorizontalContentAlignment="Stretch" Padding="20,3,3,3" SelectionChanged="ComboBox_SelectionChanged">
             <ComboBox.ItemContainerStyle>
                 <Style TargetType="ComboBoxItem">
                     <Setter Property="Padding" Value="19,1,19.5,1"/>

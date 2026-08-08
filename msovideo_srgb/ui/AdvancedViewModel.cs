@@ -138,7 +138,7 @@ namespace msovideo_srgb
                 {
                     var valMonitor = bindTo.Property.GetValue(_monitor);
                     var valThis = prop.GetValue(this);
-                    ChangedCalibration |= valMonitor != valThis;
+                    ChangedCalibration |= !valMonitor.Equals(valThis);
                     bindTo.Property.SetValue(_monitor, valThis);
                 }
             }

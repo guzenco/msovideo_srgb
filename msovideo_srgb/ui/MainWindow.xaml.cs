@@ -20,6 +20,7 @@ namespace msovideo_srgb
         private readonly MainViewModel _viewModel;
 
         private ContextMenuWF _contextMenu;
+        private AdvancedWindow _advancedWindow;
 
         private bool _autoclose = false;
 
@@ -32,6 +33,7 @@ namespace msovideo_srgb
 
             if (_autoclose) return;
 
+            SystemEvents.DisplaySettingsChanged += CloseAdvancedWindow;
             SystemEvents.DisplaySettingsChanged += _viewModel.OnDisplaySettingsChanged;
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
 
@@ -122,6 +124,15 @@ namespace msovideo_srgb
             window.ShowDialog();
         }
 
+        void CloseAdvancedWindow(object sender, EventArgs e)
+        {
+            if(_advancedWindow != null && _advancedWindow.DialogResult == null)
+            {
+                _advancedWindow.Close();
+                _advancedWindow = null;
+            }
+        }
+
         private void AdvancedButton_Click(object sender, RoutedEventArgs e)
         {
             if (Application.Current.Windows.Cast<Window>().Any(x => x is AdvancedWindow)) return;
@@ -131,11 +142,11 @@ namespace msovideo_srgb
                 Owner = this
             };
 
-            void CloseWindow(object o, EventArgs e2) => window.Close();
+            _advancedWindow = window;
+            bool? ok = window.ShowDialog();          
+            _advancedWindow = null;
 
-            SystemEvents.DisplaySettingsChanged += CloseWindow;
-            if (window.ShowDialog() == false) return;
-            SystemEvents.DisplaySettingsChanged -= CloseWindow;
+            if (ok != true) return;
 
             if (window.ChangedCalibration)
             {
@@ -147,6 +158,11 @@ namespace msovideo_srgb
         private void ReapplyButton_Click(object sender, RoutedEventArgs e)
         {
             ReapplyMonitorSettings();
+        }
+
+        private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            CloseAdvancedWindow(null, null);
         }
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
