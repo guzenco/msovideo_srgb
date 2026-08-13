@@ -148,10 +148,10 @@ namespace msovideo_srgb
 
             if (ok != true) return;
 
-            if (window.ChangedCalibration)
+            var changedProperties = window.ChangedProperties;
+            if (changedProperties.Length > 0)
             {
-                _viewModel.SaveConfig();
-                monitor?.ReapplyClamp();
+                _viewModel.OnProperiesChanged(monitor, changedProperties);
             }
         }
 
@@ -191,6 +191,21 @@ namespace msovideo_srgb
                         {
                             Dialogs.NotifyDialog($"{hotkey}\nAlready used!", preset.Name);
                         }
+                    }
+                }
+                else if (action == "Settings")
+                {
+                    if (Application.Current.Windows.Cast<Window>().Any(x => x is PresetSettingsWindow)) return;
+                    var window = new PresetSettingsWindow(preset)
+                    {
+                        Owner = this
+                    };
+
+                    bool? ok = window.ShowDialog();
+                    if (ok != true) return;
+
+                    if (window.ChangedSettings) {
+                        _viewModel.OnPresetSettingsChanged(preset);
                     }
                 }
                 else if (action == "Delete")

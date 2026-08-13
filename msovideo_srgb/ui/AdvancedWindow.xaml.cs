@@ -50,6 +50,6 @@ namespace msovideo_srgb
             DialogResult = true;
         }
 
-        public bool ChangedCalibration => _viewModel.ChangedCalibration;
+        public string[] ChangedProperties => _viewModel.ChangedProperties.ToArray();
     }
 }

@@ -96,6 +96,7 @@
     <Compile Include="common\Attributes.cs" />
     <Compile Include="common\Hotkey.cs" />
     <Compile Include="common\Preset.cs" />
+    <Compile Include="common\SettingsSourceMap.cs" />
     <Compile Include="icc\ICCProfileGenerator.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />
     <Compile Include="common\Config.cs" />
@@ -111,6 +112,9 @@
     <Compile Include="colorimetry\LstarEOTF.cs" />
     <Compile Include="colorimetry\Lut16.cs" />
     <Compile Include="colorimetry\DoubleToneCurve.cs" />
+    <Compile Include="ui\PresetSettingsWindow.xaml.cs">
+      <DependentUpon>PresetSettingsWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ui\Dialogs.cs" />
     <Compile Include="ui\RangeRule.cs" />
     <Compile Include="colorimetry\GammaToneCurve.cs" />
@@ -119,6 +123,9 @@
     <Compile Include="colorimetry\SrgbEOTF.cs" />
     <Compile Include="colorimetry\ToneCurve.cs" />
     <Page Include="ui\AboutWindow.xaml" />
+    <Page Include="ui\PresetSettingsWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="ui\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

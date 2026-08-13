@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Xml.Linq;
+using static msovideo_srgb.SettingsSourceMap;
 
 namespace msovideo_srgb
 {
@@ -31,6 +33,7 @@ namespace msovideo_srgb
             if (File.Exists(_configPath))
             {
                 config = XElement.Load(_configPath);
+                GetSameElement(GetGlobalElement());
 
                 if (config.Name == "monitors")
                 {
@@ -53,6 +56,7 @@ namespace msovideo_srgb
             else
             {
                 config = new XElement("config");
+                GetSameElement(GetGlobalElement());
                 AddPreset();
             }
         }
@@ -76,47 +80,106 @@ namespace msovideo_srgb
             config.Save(_configPath);
         }
 
-        public static void SaveMonitorData(MonitorData monitorData)
+        public static void SaveMonitorData(MonitorData monitor)
         {
-            var preset = GetActivePreset();
-            var monitor = preset.Descendants("monitor").FirstOrDefault(x => (string)x.Attribute("path") == monitorData.Path);
-            if (monitor == null)
+            var preset = GetActivePresetElement();
+            var settingsSourceMap = GetSettingsSourceMap(preset);
+            var propertiesBySources = settingsSourceMap.GetPropertiesBySources();
+            foreach (var source in EnumExtensions.ToArray<Source>())
             {
-                monitor = new XElement("monitor");
-                monitor.SetAttributeValue("path", monitorData.Path);
-                preset.Add(monitor);
+                var properties = propertiesBySources[source];
+                if (properties.Count == 0) continue;
+
+                var element = GetMonitorElement(source, monitor.Path);
+                SaveO(monitor, element, properties);
             }
-            SaveO(monitorData, monitor);
         }
 
         public static void LoadMonitorData(MonitorData monitor)
         {
-            var preset = GetActivePreset();
-            var element = preset.Descendants("monitor").FirstOrDefault(x => (string)x.Attribute("path") == monitor.Path);
-            LoadO(monitor, element);
+            var preset = GetActivePresetElement();
+            var settingsSourceMap = GetSettingsSourceMap(preset);
+            var propertiesBySources = settingsSourceMap.GetPropertiesBySources();
+            foreach (var source in EnumExtensions.ToArray<Source>())
+            {
+                var properties = propertiesBySources[source];
+                if (properties.Count == 0) continue;
+
+                var element = GetMonitorElement(source, monitor.Path);
+                LoadO(monitor, element, properties);
+            }
         }
 
-        private static XElement[] GetPresets()
+        private static XElement[] GetPresetElements()
         {
             return config.Descendants("preset").ToArray();
         }
 
-        private static XElement GetPreset(int presetId)
+        private static XElement GetPresetElement(int presetId)
         {
-            var presets = GetPresets();
+            var presets = GetPresetElements();
             if (presetId >= presets.Length || presetId < 0) throw new Exception("Unknown preset");
             return presets[presetId];
         }
 
-        private static XElement GetActivePreset()
+        private static XElement GetActivePresetElement()
         {
-            return GetPreset(GetActivePresetId());
+            return GetPresetElement(GetActivePresetId());
+        }
+
+        private static XElement GetGlobalElement()
+        {
+            var global = config.Descendants("global").FirstOrDefault();
+            if(global == null)
+            {
+                global = new XElement("global");
+                config.Add(global);
+            }
+            return global;
+        }
+        private static XElement GetSameElement(XElement element)
+        {
+            var same = element.Descendants("same").FirstOrDefault();
+            if (same == null)
+            {
+                same = new XElement("same");
+                element.Add(same);
+            }
+            return same;
+        }
+
+        private static XElement GetMonitorElement(XElement element, string path)
+        {
+            var monitor = element.Descendants("monitor").FirstOrDefault(x => (string)x.Attribute("path") == path);
+            if (monitor == null)
+            {
+                monitor = new XElement("monitor");
+                monitor.SetAttributeValue("path", path);
+                element.Add(monitor);
+            }
+            return monitor;
+        }
+
+        private static XElement GetMonitorElement(Source source, string path)
+        {
+            switch (source)
+            {
+                case Source.SEPARATE:
+                    return GetMonitorElement(GetActivePresetElement(), path);
+                case Source.SAME:
+                    return GetSameElement(GetActivePresetElement());
+                case Source.SEPARATE_GLOBAL:
+                    return GetMonitorElement(GetGlobalElement(), path);
+                case Source.SAME_GLOBAL:
+                    return GetSameElement(GetGlobalElement());
+            }
+            return GetActivePresetElement();
         }
 
         public static int GetActivePresetId()
         {
             int activePresetId = SafeGetAtributeValue(config, "active_preset", -1);
-            var presets = GetPresets();
+            var presets = GetPresetElements();
 
             if (activePresetId >= presets.Length || activePresetId < 0)
             {
@@ -150,41 +213,60 @@ namespace msovideo_srgb
             element.SetAttributeValue("hotkey_virtual_key", (uint)hotkey.VirtualKey);
         }
 
+        private static SettingsSourceMap GetSettingsSourceMap(XElement element)
+        {
+            SettingsSourceMap settingsSourceMap = new SettingsSourceMap();
+            LoadO(settingsSourceMap, element);
+            return settingsSourceMap;
+        }
+
+        private static void SetSettingsSourceMap(XElement element, SettingsSourceMap settingsSourceMap)
+        {
+            SaveO(settingsSourceMap, element);
+        }
+
         public static Preset[] GetAllPresets()
         {
-            var presets = GetPresets();
-            Preset[] presetNames = new Preset[presets.Length];
+            var presets = GetPresetElements();
+            Preset[] presetObjects = new Preset[presets.Length];
 
             for (int i = 0; i < presets.Length; i++)
             {
                 var preset = presets[i];
                 var name = SafeGetAtributeValue(preset, "name", "<unknown preset>");
                 var hotkey = GetHotkey(preset);
-                presetNames[i] = new Preset(i, name, hotkey);
+                var settingsSourceMap = GetSettingsSourceMap(preset);
+                presetObjects[i] = new Preset(i, name, hotkey, settingsSourceMap);
             }
 
-            return presetNames;
+            return presetObjects;
         }
 
         public static void RenamePreset(int presetId, string name)
         {
-            var preset = GetPreset(presetId);
+            var preset = GetPresetElement(presetId);
             preset.SetAttributeValue("name", name);
         }
 
         public static void SetPresetHotkey(int presetId, Hotkey hotkey)
         {
-            var preset = GetPreset(presetId);
+            var preset = GetPresetElement(presetId);
             SetHotkey(preset, hotkey);
+        }
+
+        public static void SetPresetSettingsSourceMap(int presetId, SettingsSourceMap settingsSourceMap)
+        {
+            var preset = GetPresetElement(presetId);
+            SetSettingsSourceMap(preset, settingsSourceMap);
         }
 
         public static void DeletePreset(int presetId)
         {
-            var preset = GetPreset(presetId);
+            var preset = GetPresetElement(presetId);
             preset.Remove();
             
             var activePreset = GetActivePresetId();
-            var presets = GetPresets();
+            var presets = GetPresetElements();
 
             if (activePreset <= presetId)
             {
@@ -200,22 +282,27 @@ namespace msovideo_srgb
 
         public static void AddPreset()
         {
-            var presets = GetPresets().ToArray();
+            var presets = GetPresetElements().ToArray();
             
-            XElement newConfigurection;
+            XElement newPreset;
             if (presets.Length > 0)
             {
-                var activePreset = GetActivePreset();
-                newConfigurection = new XElement(activePreset);
+                var activePreset = GetActivePresetElement();
+                newPreset = new XElement(activePreset);
             }
             else
             {
-                newConfigurection = new XElement("preset");
+                newPreset = new XElement("preset");
+                GetSameElement(newPreset);
             }
 
-            newConfigurection.SetAttributeValue("name", $"Preset {presets.Length + 1}");
-            SetHotkey(newConfigurection, new Hotkey());
-            config.Add(newConfigurection);
+            newPreset.SetAttributeValue("name", $"Preset {presets.Length + 1}");
+
+            var hotkey = GetHotkey(newPreset);
+            hotkey.VirtualKey = VirtualKey.None;
+            SetHotkey(newPreset, hotkey);
+
+            config.Add(newPreset);
 
             SetActivePreset(presets.Length);
         }
@@ -245,11 +332,14 @@ namespace msovideo_srgb
             }
         }
 
-        private static XElement SaveO<T>(T obj, XElement element)
+        private static XElement SaveO<T>(T obj, XElement element, HashSet<string> properties = null)
         {
             foreach (var prop in typeof(T).GetProperties())
             {
+                if (properties != null && !properties.Contains(prop.Name)) continue;
+                
                 var persistent = prop.GetCustomAttribute<PersistentAttribute>();
+
                 if (persistent != null)
                 {
                     var value = prop.GetValue(obj);
@@ -259,13 +349,15 @@ namespace msovideo_srgb
             return element;
         }
 
-        private static void LoadO<T>(T obj, XElement element)
+        private static void LoadO<T>(T obj, XElement element, HashSet<string> properties = null)
         {
             if (element == null || obj == null) return;
             foreach (var prop in typeof(T).GetProperties())
             {
-                var persistent = prop.GetCustomAttribute<PersistentAttribute>();
+                if (properties != null && !properties.Contains(prop.Name)) continue;
                 
+                var persistent = prop.GetCustomAttribute<PersistentAttribute>();
+        
                 if (persistent != null)
                 {
                     var val = SafeGetAtributeValue(element, persistent.Key, prop.PropertyType, persistent.DefaultValue);

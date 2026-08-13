@@ -5,12 +5,14 @@
         public int Id { get; set; }
         public string Name { get; set; }
         public Hotkey Hotkey { get; set; }
+        public SettingsSourceMap SettingsSourceMap { get; set; }
 
-        public Preset(int id, string name, Hotkey hotkey = null)
+        public Preset(int id, string name, Hotkey hotkey = null, SettingsSourceMap settingsSourceMap = null)
         {
             Id = id;
             Name = name;
-            Hotkey = hotkey?? new Hotkey();
+            Hotkey = hotkey ?? new Hotkey();
+            SettingsSourceMap = settingsSourceMap ?? new SettingsSourceMap();
         }
     }
 }

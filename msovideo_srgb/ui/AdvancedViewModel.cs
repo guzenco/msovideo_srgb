@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
@@ -138,7 +139,11 @@ namespace msovideo_srgb
                 {
                     var valMonitor = bindTo.Property.GetValue(_monitor);
                     var valThis = prop.GetValue(this);
-                    ChangedCalibration |= !valMonitor.Equals(valThis);
+
+                    if (!valMonitor.Equals(valThis)) {
+                        ChangedProperties.Add(bindTo.Property.Name);
+                    }
+
                     bindTo.Property.SetValue(_monitor, valThis);
                 }
             }
@@ -554,7 +559,7 @@ namespace msovideo_srgb
             get => _customPercentage;
         }
 
-        public bool ChangedCalibration { get; set; }
+        public List<string> ChangedProperties { get; } = new List<string>();
 
         private void OnPropertyChanged([CallerMemberName] string name = null)
         {

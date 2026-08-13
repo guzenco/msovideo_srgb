@@ -16,7 +16,7 @@ namespace msovideo_srgb
         }
     }
 
-    [AttributeUsage(AttributeTargets.Field)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class BindToPropertyAttribute : Attribute
     {
         public PropertyInfo Property { get; }

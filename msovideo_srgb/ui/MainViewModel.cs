@@ -135,6 +135,13 @@ namespace msovideo_srgb
             Presets.Clear();
 
             var presets = Config.GetAllPresets();
+
+            if(presets.Length == 0)
+            {
+                Config.AddPreset();
+                presets = Config.GetAllPresets();
+            }
+
             foreach (var preset in presets)
             {
                 Presets.Add(preset);
@@ -177,6 +184,20 @@ namespace msovideo_srgb
             UpdatePresets();
         }
 
+        public void OnPresetSettingsChanged(Preset preset)
+        {
+            bool isActive = preset == ActivePreset;
+
+            Config.SetPresetSettingsSourceMap(preset.Id, preset.SettingsSourceMap);
+            Config.SafeSave();
+            UpdatePresets();
+
+            if (isActive)
+            {
+                UpdateMonitors();
+            }
+        }
+
         public void ReapplyAll()
         {
             try
@@ -214,6 +235,34 @@ namespace msovideo_srgb
         public void OnHotkey(int id)
         {
             ActivePreset = Presets[id];
+        }
+
+        public void OnProperiesChanged(MonitorData monitor, string[] properties)
+        {
+            var sameSourceProperties = ActivePreset.SettingsSourceMap.GetSameSourceProperties();
+            if (properties.Any(p => sameSourceProperties.Contains(p)))
+            {
+                Config.SaveMonitorData(monitor);
+                UpdateMonitors();
+            }
+            else
+            {
+                SaveConfig();
+                monitor?.ReapplyClamp();
+            }
+        }
+
+        public void OnClampChanged(MonitorData monitor)
+        {
+            if (ActivePreset.SettingsSourceMap.GetSameSourceProperties().Contains(nameof(MonitorData.Clamp)))
+            {
+                Config.SaveMonitorData(monitor);
+                UpdateMonitors();
+            }
+            else
+            {
+                SaveConfig();
+            }
         }
 
         public void SaveConfig()

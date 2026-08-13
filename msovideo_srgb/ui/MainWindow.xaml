@@ -120,6 +120,7 @@
                             <ContextMenu>
                                 <MenuItem Header="Rename" Style="{StaticResource MenuItemStyle}" />
                                 <MenuItem Header="Hotkey" Style="{StaticResource MenuItemStyle}" />
+                                <MenuItem Header="Settings" Style="{StaticResource MenuItemStyle}" />
                                 <MenuItem Header="Delete" Style="{StaticResource MenuItemStyle}" />
                             </ContextMenu>
                         </Setter.Value>

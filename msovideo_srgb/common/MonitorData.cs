@@ -405,7 +405,7 @@ namespace msovideo_srgb
             catch { }
             finally
             {
-                _viewModel.SaveConfig();
+                _viewModel.OnClampChanged(this);
             }
         }
         
@@ -417,7 +417,7 @@ namespace msovideo_srgb
                 {
                     UpdateClamp(value);
                     Clamp = value;
-                    _viewModel.SaveConfig();
+                    _viewModel.OnClampChanged(this);
                 }
                 catch (Exception e)
                 {
@@ -461,99 +461,131 @@ namespace msovideo_srgb
         }
 
         [Persistent("clamp", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Clamp))]
         public bool Clamp { get; set; }
 
         [Persistent("target", 0)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Target))]
         public int Target { set; get; }
 
         [Persistent("resolution", 2)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Resolution))]
         public int Resolution { set; get; }
 
         [Persistent("use_icc", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.UseIcc))]
         public bool UseIcc { set; get; }
 
         [Persistent("icc_path", "")]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.ProfilePath))]
         public string ProfilePath { set; get; }
 
         [Persistent("limit_luminance", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.LimitLuminance))]
         public bool LimitLuminance { set; get; }
 
         [Persistent("max_luminance", 80)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.LimitLuminance))]
         public int MaxLuminance { set; get; }
 
         [Persistent("calibrate_gamma", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Gamma))]
         public bool CalibrateGamma { set; get; }
 
         [Persistent("selected_gamma", 0)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Gamma))]
         public int SelectedGamma { set; get; }
 
         [Persistent("custom_gamma", 2.2)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Gamma))]
         public double CustomGamma { set; get; }
 
         [Persistent("custom_percentage", 100)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Gamma))]
         public double CustomPercentage { set; get; }
 
         [Persistent("use_vcgt", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Gamma))]
         public bool UseVcgt { set; get; }
 
         [Persistent("optimize_matrix", true)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.OptimizeMatrix))]
         public bool OptimizeMatrix { set; get; }
 
         [Persistent("target_white", 0)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.TargetWhite))]
         public int TargetWhite { set; get; }
 
         [Persistent("custom_white_x", 0.3127)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.TargetWhite))]
         public double CustomWhiteX { set; get; }
 
         [Persistent("custom_white_y", 0.3290)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.TargetWhite))]
         public double CustomWhiteY { set; get; }
 
         [Persistent("report_white_d65", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Report))]
         public bool ReportWhiteD65 { set; get; }
 
         [Persistent("report_color_space_srgb", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Report))]
         public bool ReportColorSpaceSRGB { set; get; }
 
         [Persistent("report_gamma_srgb", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Report))]
         public bool ReportGammaSRGB { set; get; }
 
         [Persistent("exclude_hdr_metadata", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Report))]
         public bool ExcludeHdrMetadata { set; get; }
 
         [Persistent("use_icc_hdr", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.UseIccHDR))]
         public bool UseIccHDR { set; get; }
 
         [Persistent("icc_path_hdr", "")]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.ProfilePathHDR))]
         public string ProfilePathHDR { set; get; }
 
         [Persistent("calibrate_gamma_hdr", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.GammaHDR))]
         public bool CalibrateGammaHDR { set; get; }
 
         [Persistent("target_peak", 10000)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.GammaHDR))]
         public int TargetPeak { set; get; }
 
         [Persistent("bpc_threshold", 80)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.GammaHDR))]
         public double BPCThreshold { set; get; }
 
         [Persistent("target_white_hdr", 0)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.TargetWhiteHDR))]
         public int TargetWhiteHDR { set; get; }
 
         [Persistent("custom_white_hdr_x", 0.3127)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.TargetWhiteHDR))]
         public double CustomWhiteHdrX { set; get; }
 
         [Persistent("custom_white_hdr_y", 0.3290)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.TargetWhiteHDR))]
         public double CustomWhiteHdrY { set; get; }
 
         [Persistent("override_metadata_hdr", false)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.OverrideMetadataHDR))]
         public bool OverrideMetadataHDR { set; get; }
 
         [Persistent("peak_luminance_hdr", 10000)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.OverrideMetadataHDR))]
         public int PeakLuminanceHDR { set; get; }
 
         [Persistent("max_full_frame_luminance_hdr", 10000)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.OverrideMetadataHDR))]
         public int MaxFullFrameLuminanceHDR { set; get; }
 
         [Persistent("min_luminance_hdr", 0)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.OverrideMetadataHDR))]
         public double MinLuminanceHDR { set; get; }
 
         public Colorimetry.ColorSpace EdidColorSpace { get; }

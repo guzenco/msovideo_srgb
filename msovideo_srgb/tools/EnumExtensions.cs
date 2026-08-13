@@ -28,5 +28,25 @@ namespace msovideo_srgb
         {
             return ToArray<T>().Select(e => new { Name = e.GetDescription(), Value = e }).ToArray();
         }
+
+        public static bool GetBit<T>(this T val, int bit) where T : Enum
+        {
+            uint raw = Convert.ToUInt32(val);
+            return (raw & (1 << bit)) != 0;
+        }
+
+        public static T SetBit<T>(this T val, int bit, bool set) where T : Enum
+        {
+            uint raw = Convert.ToUInt32(val);
+            if (set)
+            {
+                raw |= 1u << bit;
+            }
+            else
+            {
+                raw &= ~(1u << bit);
+            }
+            return (T)Enum.ToObject(typeof(T), raw);
+        }
     }
 }
