@@ -373,9 +373,9 @@ namespace msovideo_srgb
             else
             {
                 luts = new double[][] {
-                    new double[] { 0, targetWhitePoint.Equals(Colorimetry.NativeWhite) ? 1 : profile.TrcSampleInverse(0, matrixWhite[0, 0]) },
-                    new double[] { 0, targetWhitePoint.Equals(Colorimetry.NativeWhite) ? 1 : profile.TrcSampleInverse(1, matrixWhite[1, 1]) },
-                    new double[] { 0, targetWhitePoint.Equals(Colorimetry.NativeWhite) ? 1 : profile.TrcSampleInverse(2, matrixWhite[2, 2]) }
+                    new double[] { 0, profile.TrcSampleInverse(0, matrixWhite[0, 0]) },
+                    new double[] { 0, profile.TrcSampleInverse(1, matrixWhite[1, 1]) },
+                    new double[] { 0, profile.TrcSampleInverse(2, matrixWhite[2, 2]) }
                 };
             }
 
