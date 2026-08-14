@@ -41,7 +41,7 @@
             </WrapPanel>
         </Grid>
         <Grid Margin="0,0,0,6">
-        <DataGrid ItemsSource="{Binding Monitors}" RowHeaderWidth="0" AutoGenerateColumns="False"
+        <DataGrid x:Name="MonitorsGrid"  ItemsSource="{Binding Monitors}" RowHeaderWidth="0" AutoGenerateColumns="False"
                 DockPanel.Dock="Top" CanUserResizeColumns="False" CanUserSortColumns="False"
                 CanUserReorderColumns="False">
             <DataGrid.Resources>
@@ -97,6 +97,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      Checked="CheckBox_Toggled" Unchecked="CheckBox_Toggled" 
                                       IsEnabled="{Binding CanClamp}"
                                       IsChecked="{Binding Clamped, UpdateSourceTrigger=PropertyChanged}" />
                         </DataTemplate>

@@ -10,13 +10,13 @@
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner">
     <StackPanel Margin="6,0,6,6">
-        <DataGrid ItemsSource="{Binding Preset.SettingsSourceMap.Settings}" RowHeaderWidth="0" AutoGenerateColumns="False" CanUserResizeColumns="False" CanUserSortColumns="False" CanUserReorderColumns="False" HorizontalGridLinesBrush="LightGray" VerticalGridLinesBrush="LightGray" BorderThickness="1,1,1,0" BorderBrush="LightGray">
+        <DataGrid x:Name="SettingsSourceMapGrid" ItemsSource="{Binding Preset.SettingsSourceMap.Settings}" RowHeaderWidth="0" AutoGenerateColumns="False" CanUserResizeColumns="False" CanUserSortColumns="False" CanUserReorderColumns="False" HorizontalGridLinesBrush="LightGray" VerticalGridLinesBrush="LightGray" BorderThickness="1,1,1,0" BorderBrush="LightGray">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Width="200" Binding="{Binding Name}" IsReadOnly="True" />
                 <DataGridTemplateColumn Header="Same">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding Same, UpdateSourceTrigger=PropertyChanged}" ToolTip="Use same value for all displays"/>
+                            <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding Same, UpdateSourceTrigger=PropertyChanged}" Checked="CheckBox_Toggled" Unchecked="CheckBox_Toggled" ToolTip="Use same value for all displays"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                     <DataGridTemplateColumn.CellStyle>
@@ -28,7 +28,7 @@
                 <DataGridTemplateColumn Header="Global">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding Global, UpdateSourceTrigger=PropertyChanged}" ToolTip="Use global values instead of preset ones"/>
+                            <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding Global, UpdateSourceTrigger=PropertyChanged}" Checked="CheckBox_Toggled" Unchecked="CheckBox_Toggled" ToolTip="Use global values instead of preset ones"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                     <DataGridTemplateColumn.CellStyle>

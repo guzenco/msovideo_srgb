@@ -12,6 +12,7 @@ using MessageBox = System.Windows.Forms.MessageBox;
 using ContextMenuWF = System.Windows.Forms.ContextMenu;
 using MenuItemWF = System.Windows.Forms.MenuItem;
 using NotifyIcon = System.Windows.Forms.NotifyIcon;
+using System.Windows.Data;
 
 namespace msovideo_srgb
 {
@@ -152,6 +153,23 @@ namespace msovideo_srgb
             if (changedProperties.Length > 0)
             {
                 _viewModel.OnProperiesChanged(monitor, changedProperties);
+            }
+        }
+
+        private void CheckBox_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox checkBox)
+            {
+                var binding = BindingOperations.GetBinding(checkBox, CheckBox.IsCheckedProperty);
+                string fieldName = binding?.Path?.Path;
+
+                if (fieldName == null) return;
+
+                foreach (var item in MonitorsGrid.SelectedItems)
+                {
+                    var prop = item.GetType().GetProperty(fieldName);
+                    prop?.SetValue(item, checkBox.IsChecked);
+                }
             }
         }
 

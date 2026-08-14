@@ -115,8 +115,10 @@ namespace msovideo_srgb
             return propertiesBySources[Source.SAME].Union(propertiesBySources[Source.SAME_GLOBAL]).ToHashSet();
         }
 
-        public class Setting
+        public class Setting : INotifyPropertyChanged
         {
+            public event PropertyChangedEventHandler PropertyChanged;
+
             private object _sourceObject;
             private PropertyInfo _sourceProperty;
             private Source? _unchanged;
@@ -138,6 +140,7 @@ namespace msovideo_srgb
                     }
 
                     Source = Source.SetBit(SAME_BIT, value);
+                    OnPropertyChanged(nameof(Same));
                 }
             }
 
@@ -152,6 +155,7 @@ namespace msovideo_srgb
                     }
 
                     Source = Source.SetBit(GLOBAL_BIT, value);
+                    OnPropertyChanged(nameof(Global));
                 }
             }
 
@@ -162,6 +166,11 @@ namespace msovideo_srgb
                 Name = name;
                 _sourceObject = sourceObject;
                 _sourceProperty = sourceProperty;
+            }
+
+            private void OnPropertyChanged(string name = null)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
             }
         }
 
