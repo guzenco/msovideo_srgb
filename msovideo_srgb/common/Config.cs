@@ -33,7 +33,6 @@ namespace msovideo_srgb
             if (File.Exists(_configPath))
             {
                 config = XElement.Load(_configPath);
-                GetSameElement(GetGlobalElement());
 
                 if (config.Name == "monitors")
                 {
@@ -56,7 +55,6 @@ namespace msovideo_srgb
             else
             {
                 config = new XElement("config");
-                GetSameElement(GetGlobalElement());
                 AddPreset();
             }
         }
@@ -134,9 +132,11 @@ namespace msovideo_srgb
             {
                 global = new XElement("global");
                 config.Add(global);
+                MoveElement(config, global, int.MinValue, false);
             }
             return global;
         }
+
         private static XElement GetSameElement(XElement element)
         {
             var same = element.Descendants("same").FirstOrDefault();
@@ -144,6 +144,7 @@ namespace msovideo_srgb
             {
                 same = new XElement("same");
                 element.Add(same);
+                MoveElement(element, same, int.MinValue, false);
             }
             return same;
         }
@@ -247,6 +248,13 @@ namespace msovideo_srgb
         public static Preset[] GetAllPresets()
         {
             var presets = GetPresetElements();
+
+            if (presets.Length == 0)
+            {
+                AddPreset();
+                presets = GetPresetElements();
+            }
+
             Preset[] presetObjects = new Preset[presets.Length];
 
             for (int i = 0; i < presets.Length; i++)
@@ -281,22 +289,23 @@ namespace msovideo_srgb
 
         public static void DeletePreset(int presetId)
         {
+            int activePresetId = GetActivePresetId();
+
             var preset = GetPresetElement(presetId);
             preset.Remove();
             
-            var activePreset = GetActivePresetId();
             var presets = GetPresetElements();
 
-            if (activePreset <= presetId)
+            if (activePresetId <= presetId)
             {
-                activePreset = Math.Min(activePreset, presets.Length - 1);
+                activePresetId = Math.Min(activePresetId, presets.Length - 1);
             }
             else
             {
-                activePreset = Math.Min(activePreset -1, presets.Length - 1);
+                activePresetId = Math.Min(activePresetId -1, presets.Length - 1);
             }
 
-            SetActivePreset(activePreset);
+            SetActivePreset(activePresetId);
         }
 
         public static void AddPreset()
@@ -312,7 +321,6 @@ namespace msovideo_srgb
             else
             {
                 newPreset = new XElement("preset");
-                GetSameElement(newPreset);
             }
 
             newPreset.SetAttributeValue("name", $"Preset {presets.Length + 1}");

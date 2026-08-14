@@ -79,7 +79,7 @@ namespace msovideo_srgb
                         helpMessage += $"Must be a number: {val}\n";
                     }
                 }
-                else if (arg.Equals("-force", StringComparison.OrdinalIgnoreCase));
+                else if (arg.Equals("-force", StringComparison.OrdinalIgnoreCase)) { }
                 else
                 {
                     helpMessage += $"Unknown argument: {arg}\n";
@@ -287,7 +287,7 @@ namespace msovideo_srgb
                 var item = new MenuItemWF();
                 _contextMenu.MenuItems.Add(item);
                 item.Text = monitor.Name;
-                item.Checked = monitor.Clamped;
+                item.Checked = monitor.Clamped != false;
                 item.Enabled = monitor.CanClamp;
                 item.Click += (sender, args) => monitor.Clamped = !monitor.Clamped;
             }

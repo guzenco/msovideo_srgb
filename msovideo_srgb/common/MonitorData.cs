@@ -16,7 +16,7 @@ namespace msovideo_srgb
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private bool _clamped;
+        private bool? _clamped;
 
         private MainViewModel _viewModel;
 
@@ -54,6 +54,7 @@ namespace msovideo_srgb
                 EdidColorSpace = Colorimetry.sRGB;
             }
 
+            _clamped = false;
             Clamp = false;
             ProfilePath = "";
             MaxLuminance = 80;
@@ -111,6 +112,16 @@ namespace msovideo_srgb
             ActionScheduler.Add(Path, () => ApplyProfile(profileName, hdr), HandleClampException);
         }
 
+        private bool IsManagedProfileActive(bool hdr)
+        {
+            string profileName = DisplayColorProfileManager.GetProfile(Display, hdr);
+            if (Regex.IsMatch(profileName, MHCProfileNamePattern) && ICCProfileGenerator.IsGeneratedByThis(profileName))
+            {
+                return true;
+            }
+            return false;
+        }
+
         private void ApplyProfile(string profileName, bool hdr)
         {
             ColorProfileFactory.CreateProfile(MHCProfileNameReset, CurveResolution);
@@ -124,7 +135,7 @@ namespace msovideo_srgb
             DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameReset, hdr);
         }
 
-        private void UnapplyProfile(string profileName, bool hdr, bool force)
+        private void UnapplyProfile(string profileName, bool hdr, bool force = true)
         {
             if (DisplayColorProfileManager.GetProfile(Display, hdr).Equals(profileName))
             {
@@ -185,37 +196,30 @@ namespace msovideo_srgb
 
             if (Regex.IsMatch(profileNameSDR, MHCProfileNamePattern) && profileNameSDR != MHCProfileNameSDR)
             {
-                UnapplyProfile(profileNameSDR, false, true);
+                UnapplyProfile(profileNameSDR, false);
             }
 
             if (Regex.IsMatch(profileNameHDR, MHCProfileNamePattern) && profileNameHDR != MHCProfileNameHDR)
             {
-                UnapplyProfile(profileNameHDR, true, true);
+                UnapplyProfile(profileNameHDR, true);
             }
         }
 
-        private void ScheduleUnapplyProfile(bool clamped, bool doClamp)
+        private void ScheduleUnapplyProfile(bool doClamp)
         {
-            ActionScheduler.Add(Path, () => UnapplyProfiles(clamped, doClamp), HandleClampException);
+            ActionScheduler.Add(Path, () => UnapplyProfiles(doClamp), HandleClampException);
         }
 
-        private void UnapplyProfiles(bool clamped, bool doClamp)
+        private void UnapplyProfiles(bool doClamp)
         {
-            if (clamped || !doClamp)
+
+            if (!doClamp || !CanClampSDR || !(UseEdid || UseIcc))
             {
-                UnapplyProfile(MHCProfileNameSDR, false, !doClamp || !(UseEdid || UseIcc));
-                UnapplyProfile(MHCProfileNameHDR, true, !doClamp || !(UseIccHDR || OverrideMetadataHDR));
+                UnapplyProfile(MHCProfileNameSDR, false);
             }
-            else
+            if (!doClamp || !CanClampHDR || !(UseIccHDR || OverrideMetadataHDR))
             {
-                if (!CanClampSDR || !(UseEdid || UseIcc))
-                {
-                    UnapplyProfile(MHCProfileNameSDR, false, true);
-                }
-                if (!CanClampHDR || !(UseIccHDR || OverrideMetadataHDR))
-                {
-                    UnapplyProfile(MHCProfileNameHDR, true, true);
-                }
+                UnapplyProfile(MHCProfileNameHDR, true);
             }
         }
 
@@ -232,7 +236,7 @@ namespace msovideo_srgb
             }
 
             ScheduleRemoveWrongProfileAssociations();
-            ScheduleUnapplyProfile(_clamped, doClamp);
+            ScheduleUnapplyProfile(doClamp);
 
             if (!doClamp || !CanClamp) return;
 
@@ -391,42 +395,50 @@ namespace msovideo_srgb
 
         private void HandleClampException(Exception e)
         {
+            ActionScheduler.Clear(Path);
+
+            if (e is DisplayNotFoundException) return;
+            MessageBox.Show(e.Message);
+
             try
             {
-                ActionScheduler.Clear(Path);
-                if (e is DisplayNotFoundException) return;
-                MessageBox.Show(e.Message);
-                _clamped = DisplayColorProfileManager.GetProfile(Display, false).Equals(MHCProfileNameSDR) && (!UseIccHDR || DisplayColorProfileManager.GetProfile(Display, true).Equals(MHCProfileNameHDR));
-                Clamp = _clamped;
-                Application.Current.Dispatcher.Invoke(() => {
-                    OnPropertyChanged(nameof(Clamped));
-                }); 
+                _clamped = false;
+                if (Clamp || IsManagedProfileActive(false) || IsManagedProfileActive(true))
+                {
+                    _clamped = null;
+                }
             }
-            catch { }
-            finally
+            catch
             {
-                _viewModel.OnClampChanged(this);
+                _clamped = null;
             }
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                OnPropertyChanged(nameof(Clamped));
+            });
         }
         
-        public bool Clamped
+        public bool? Clamped
         {
             set
             {
                 try
                 {
-                    UpdateClamp(value);
-                    Clamp = value;
-                    _viewModel.OnClampChanged(this);
+                    Clamp = value == true;
+                    UpdateClamp(value == true);
+                    _clamped = Clamp;
+                    OnPropertyChanged(nameof(Clamped));
                 }
                 catch (Exception e)
                 {
                     HandleClampException(e);
                     return;
                 }
-
-                _clamped = value;
-                OnPropertyChanged();
+                finally
+                {
+                    _viewModel.OnClampChanged(this);
+                }
             }
             get => _clamped;
         }

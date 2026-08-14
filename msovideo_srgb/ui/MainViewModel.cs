@@ -136,12 +136,6 @@ namespace msovideo_srgb
 
             var presets = Config.GetAllPresets();
 
-            if(presets.Length == 0)
-            {
-                Config.AddPreset();
-                presets = Config.GetAllPresets();
-            }
-
             foreach (var preset in presets)
             {
                 Presets.Add(preset);
@@ -268,6 +262,7 @@ namespace msovideo_srgb
             if (ActivePreset.SettingsSourceMap.GetSameSourceProperties().Contains(nameof(MonitorData.Clamp)))
             {
                 Config.SaveMonitorData(monitor);
+                Config.SafeSave();
                 UpdateMonitors();
             }
             else

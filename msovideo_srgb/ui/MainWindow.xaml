@@ -133,6 +133,27 @@
                 </Style>
             </ComboBox.ItemContainerStyle>
             <ComboBox.Resources>
+                <DataTemplate x:Key="IconTemplate">
+                    <Path Data="{Binding}" Stretch="Uniform">
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Setter Property="Fill" Value="Gray"/>
+                                <Setter Property="Stroke" Value="DimGray"/>
+                                <Setter Property="StrokeThickness" Value="0.3"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                                        <Setter Property="Fill" Value="DarkGray"/>
+                                        <Setter Property="Stroke" Value="Gray"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                                        <Setter Property="Stroke" Value="DarkGray"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
+                </DataTemplate>
+
                 <DataTemplate x:Key="DropdownItemTemplate">
                     <Grid>
                         <UniformGrid Rows="2" HorizontalAlignment="Left" VerticalAlignment="Center" Height="18">
@@ -146,13 +167,9 @@
                                     </Style.Triggers>
                                 </Style>
                             </UniformGrid.Style>
-                            <Button Tag="-1" Focusable="False" Background="Transparent" BorderThickness="0" Padding="0,2,0,2" Click="MovePresetButton_Click">
-                                <Path Fill="LightGray" Stretch="Uniform" Data="M 0,50 L 50,0 L 100,50 Z"/>
-                            </Button>
-                            <Button Tag="1" Focusable="False" Background="Transparent" BorderThickness="0" Padding="0,2,0,2" Click="MovePresetButton_Click">
-                                <Path Fill="LightGray" Stretch="Uniform" Data="M 0,0 L 50,50 L 100,0 Z"/>
-                            </Button>
-                        </UniformGrid>
+                                <Button Tag="-1" Content="M 0,50 L 50,0 L 100,50 Z" ContentTemplate="{StaticResource IconTemplate}" Focusable="False" Background="Transparent" BorderBrush="Transparent" Click="MovePresetButton_Click"/>
+                                <Button Tag="1" Content="M 0,0 L 50,50 L 100,0 Z" ContentTemplate="{StaticResource IconTemplate}" Focusable="False" Background="Transparent" BorderBrush="Transparent" Click="MovePresetButton_Click"/>
+                            </UniformGrid>
                         <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding Hotkey}" HorizontalAlignment="Right" VerticalAlignment="Top" FontSize="9" Margin="0,0,15.5,0" />
                     </Grid>
