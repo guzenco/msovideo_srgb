@@ -200,6 +200,25 @@ namespace msovideo_srgb
             config.SetAttributeValue("active_preset", presetId);
         }
 
+        public static bool MovePreset(int presetId, int offset)
+        {
+            var preset = GetPresetElement(presetId);
+            int newPresetId = MoveElement(config, preset, offset, true);
+            if (newPresetId != -1)
+            {
+                int activePresetId = GetActivePresetId();
+                if(activePresetId == presetId)
+                {
+                    SetActivePreset(newPresetId);
+                }
+                else if (activePresetId == newPresetId) {
+                    SetActivePreset(activePresetId + (offset < 0 ? 1: -1));
+                }
+                return true;
+            }
+            return false;
+        }
+
         private static Hotkey GetHotkey(XElement element)
         {
             uint keyModifier = SafeGetAtributeValue<uint>(element, "hotkey_key_modifier", 0);
@@ -305,6 +324,34 @@ namespace msovideo_srgb
             config.Add(newPreset);
 
             SetActivePreset(presets.Length);
+        }
+
+        static int MoveElement(XElement parent, XElement element, int offset, bool sameNameOnly)
+        {
+            if (element == null) return -1;
+
+            var elements = sameNameOnly ? parent.Elements(element.Name).ToList() : parent.Elements().ToList();
+            int index = elements.IndexOf(element);
+            if (index < 0) return -1;
+
+
+            int newIndex = index + offset;
+            newIndex = Math.Min(newIndex, elements.Count - 1);
+            newIndex = Math.Max(newIndex, 0);
+
+            if (index == newIndex) return -1;
+
+            element.Remove();
+
+            if (offset < 0)
+            {
+                elements[newIndex].AddBeforeSelf(element);
+            }
+            else
+            {
+                elements[newIndex].AddAfterSelf(element);
+            }
+            return newIndex;
         }
 
         private static T SafeGetAtributeValue<T>(XElement element, string attributeName, T defaultValue)

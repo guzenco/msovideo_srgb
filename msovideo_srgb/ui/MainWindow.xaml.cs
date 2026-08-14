@@ -181,6 +181,22 @@ namespace msovideo_srgb
         private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             CloseAdvancedWindow(null, null);
+
+            if (sender is ComboBox comboBox && comboBox.IsFocused)
+            {
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => comboBox.Focus()));
+            }
+        }
+
+        private void MovePresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.DataContext is Preset preset)
+            {
+                if (int.TryParse(button.Tag?.ToString(), out int offset))
+                {
+                    _viewModel.MovePreset(preset, offset);
+                }
+            }
         }
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)

@@ -156,6 +156,17 @@ namespace msovideo_srgb
             OnPropertyChanged(nameof(ActivePreset));
         }
 
+        public void MovePreset(Preset preset, int offeset)
+        {
+            bool moved = Config.MovePreset(preset.Id, offeset);
+
+            if (moved)
+            {
+                Config.SafeSave();
+                UpdatePresets();
+            }
+        }
+
         public void RenamePreset(Preset preset, string name)
         {     
             Config.RenamePreset(preset.Id, name);

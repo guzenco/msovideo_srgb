@@ -110,10 +110,9 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding ActivePreset, Mode=TwoWay}" VerticalAlignment="Bottom" HorizontalContentAlignment="Stretch" Padding="20,3,3,3" SelectionChanged="ComboBox_SelectionChanged">
+        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding ActivePreset, Mode=TwoWay}" VerticalAlignment="Bottom" HorizontalContentAlignment="Stretch" Padding="5,3,-12.3,3" SelectionChanged="ComboBox_SelectionChanged">
             <ComboBox.ItemContainerStyle>
-                <Style TargetType="ComboBoxItem">
-                    <Setter Property="Padding" Value="19,1,19.5,1"/>
+                <Style TargetType="ComboBoxItem"> 
                     <Setter Property="BorderThickness" Value="0,0.25,0,0"/>
                     <Setter Property="BorderBrush" Value="LightGray"/>
                     <Setter Property="ContextMenu">
@@ -133,14 +132,45 @@
                     </Style.Triggers>
                 </Style>
             </ComboBox.ItemContainerStyle>
-            <ComboBox.ItemTemplate>
-                <DataTemplate>
+            <ComboBox.Resources>
+                <DataTemplate x:Key="DropdownItemTemplate">
                     <Grid>
-                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding Hotkey}" HorizontalAlignment="Right" FontSize="9" />
+                        <UniformGrid Rows="2" HorizontalAlignment="Left" VerticalAlignment="Center" Height="18">
+                            <UniformGrid.Style>
+                                <Style TargetType="UniformGrid">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Id}" Value="-1">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </UniformGrid.Style>
+                            <Button Tag="-1" Focusable="False" Background="Transparent" BorderThickness="0" Padding="0,2,0,2" Click="MovePresetButton_Click">
+                                <Path Fill="LightGray" Stretch="Uniform" Data="M 0,50 L 50,0 L 100,50 Z"/>
+                            </Button>
+                            <Button Tag="1" Focusable="False" Background="Transparent" BorderThickness="0" Padding="0,2,0,2" Click="MovePresetButton_Click">
+                                <Path Fill="LightGray" Stretch="Uniform" Data="M 0,0 L 50,50 L 100,0 Z"/>
+                            </Button>
+                        </UniformGrid>
+                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Hotkey}" HorizontalAlignment="Right" VerticalAlignment="Top" FontSize="9" Margin="0,0,15.5,0" />
                     </Grid>
                 </DataTemplate>
-            </ComboBox.ItemTemplate>
+                
+                <DataTemplate x:Key="SelectionItemTemplate">
+                    <Grid>  
+                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Hotkey}" HorizontalAlignment="Right" VerticalAlignment="Top" FontSize="9" Margin="0,0,15.5,0"/>
+                    </Grid>
+                </DataTemplate>
+
+                <local:ComboBoxTemplateSelector x:Key="PresetsTemplateSelector"  DropdownTemplate="{StaticResource DropdownItemTemplate}"  SelectionTemplate="{StaticResource SelectionItemTemplate}" />
+            </ComboBox.Resources>
+
+            <ComboBox.ItemTemplateSelector>
+                <StaticResource ResourceKey="PresetsTemplateSelector"/>
+            </ComboBox.ItemTemplateSelector>
         </ComboBox>
         </Grid>
     </DockPanel>
