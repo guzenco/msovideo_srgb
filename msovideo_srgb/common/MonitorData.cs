@@ -451,6 +451,7 @@ namespace msovideo_srgb
                 UpdateClamp(clamped);
                 _clamped = clamped;
                 OnPropertyChanged(nameof(CanClamp));
+                OnPropertyChanged(nameof(Clamped));
             }
             catch (Exception e)
             {
