@@ -1,4 +1,4 @@
-## [Download latest release](https://github.com/guzenco/msovideo_srgb/releases/latest/download/msovideo_srgb.zip)
+## [Download latest release](https://github.com/guzenco/msovideo_srgb/releases/latest/)
 
 # About
 This tool uses an ICC profile with MHC2 tag to convert colors before sending them to a wide gamut monitor to effectively clamp it to sRGB (alternatively: Display P3, Adobe RGB or BT.2020), based on the chromaticities provided in its EDID.

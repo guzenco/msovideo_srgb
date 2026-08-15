@@ -1,4 +1,5 @@
-name: Build .NET Framework
+name: Build
+run-name: Build v${{ github.event.inputs.version }} @ ${{ github.sha }}
 
 on:
   workflow_dispatch:
@@ -14,10 +15,19 @@ on:
           required: true
           type: string
           
+concurrency:
+  group: build-${{ github.sha }}
+  cancel-in-progress: false
+  
+env:
+  BUILD_NAME: msovideo_srgb-${{ github.event.inputs.version }}-win64
+          
 jobs:
   build:
     runs-on: windows-latest
-
+    permissions:
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,17 +48,40 @@ jobs:
 
       - name: Build solution
         run: msbuild msovideo_srgb.sln /p:Configuration=Release
-      - name: Prepare output folder
+      
+      - name: Prepare build files
         run: |
-          mkdir output
-          copy msovideo_srgb\bin\x64\Release\*.exe output\
-          copy msovideo_srgb\bin\x64\Release\*.dll output\
-          copy LICENSE output\
-          copy LICENSE-THIRD-PARTY output\
+          $path = "output"
+          New-Item -ItemType Directory -Force -Path $path
+          Copy-Item -Path "msovideo_srgb\bin\x64\Release\*.exe" -Destination $path -Force
+          Copy-Item -Path "msovideo_srgb\bin\x64\Release\*.dll" -Destination $path -Force
+          Copy-Item -Path "LICENSE" -Destination $path -Force
+          Copy-Item -Path "LICENSE-THIRD-PARTY" -Destination $path -Force
 
-      # Upload the output folder as artifact
+      - name: Create build archive
+        run: |
+          New-Item -ItemType Directory -Force -Path build
+          Compress-Archive -Path "output\*" -DestinationPath "build\${{ env.BUILD_NAME }}.zip"
+
+      - name: Attest build provenance
+        id: attest
+        uses: actions/attest@v4
+        with:
+          subject-path: build/*
+          
+      - name: Export attestation URL
+        run: echo "attestation-url=${{ steps.attest.outputs.attestation-url }}" >> $GITHUB_OUTPUT
+          
+      - name: Verify build provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Get-ChildItem build | ForEach-Object {
+            gh attestation verify $_.FullName --repo ${{ github.repository }}
+          }
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: build
-          path: output/
+          path: build/

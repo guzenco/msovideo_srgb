@@ -7,7 +7,6 @@ on:
       version:
         description: 'Release version'
         required: true
-        pattern: '^[0-9]+\\.[0-9]+\\.[0-9]+$'
       notes:
         description: 'Release notes'
         required: true
@@ -17,24 +16,64 @@ on:
         type: boolean
         default: true
 
+concurrency:
+  group: Release
+  cancel-in-progress: false
+  
+env:
+  RELEASE_NAME: v${{ github.event.inputs.version }}
+
 jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Validate version format
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Error "Version format incorrect"
+            exit 1
+          }
+          Write-Host "Version format validated"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch tags
+        run: git fetch --tags
+
+      - name: Validate tag uniqueness
+        run: |
+          $tag = "${{ env.RELEASE_NAME }}"
+          git rev-parse -q --verify "refs/tags/$tag" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Error "Tag $tag already exists"
+            exit 1
+          } else {
+            Write-Host "Tag $tag does not exist"
+            exit 0
+          }
+
   build:
+    needs: validate
     uses: ./.github/workflows/build.yml
     with: 
       version: ${{ github.event.inputs.version }}
+    permissions:
+      id-token: write
+      attestations: write
 
   release:
     needs: build
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
           name: build
           path: ./artifact
-
-      - name: Create ZIP from artifact
-        run: powershell Compress-Archive -Path "artifact\*" -DestinationPath "msovideo_srgb.zip"
 
       - name: Prepare release notes 
         run: | 
@@ -44,10 +83,11 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: v${{ github.event.inputs.version }}
+          tag_name: ${{ env.RELEASE_NAME }}
+          name: ${{ env.RELEASE_NAME }}
           body_path: RELEASE_NOTES.md
           prerelease: ${{ github.event.inputs.prerelease }}
-          files: msovideo_srgb.zip
+          files: artifact/*
+          overwrite_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
