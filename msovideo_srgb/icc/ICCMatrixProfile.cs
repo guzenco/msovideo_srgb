@@ -266,30 +266,52 @@ namespace msovideo_srgb
                     else if (tagSig.EndsWith("TRC") && !useCLUT)
                     {
                         var typeSig = new string(reader.ReadChars(4));
-                        if (typeSig != "curv")
-                        {
-                            throw new ICCProfileException(tagSig + " is not of curveType");
-                        }
-
-                        reader.ReadUInt32();
-
-                        var numEntries = reader.ReadUInt32();
 
                         ToneCurve curve;
-                        if (numEntries == 1)
+                        if (typeSig == "curv")
                         {
-                            var gamma = reader.ReadU8Fixed8();
-                            curve = new GammaToneCurve(gamma);
+                            reader.ReadUInt32();
+
+                            var numEntries = reader.ReadUInt32();
+
+                            if (numEntries == 1)
+                            {
+                                var gamma = reader.ReadU8Fixed8();
+                                curve = new GammaToneCurve(gamma);
+                            }
+                            else
+                            {
+                                var entries = new ushort[numEntries];
+                                for (uint j = 0; j < numEntries; j++)
+                                {
+                                    entries[j] = reader.ReadUInt16();
+                                }
+
+                                curve = new LutToneCurve(entries);
+                            }
+                        }
+                        else if (typeSig == "para")
+                        {
+                            reader.ReadUInt32();
+
+                            var functionType  = reader.ReadUInt16();
+                            var numParameters = (size - 12) / 4;
+
+                            if (functionType  > 4) throw new ICCProfileException("Unsupported function type " + functionType);
+
+                            reader.ReadUInt16();
+
+                            var parameters = new double[numParameters];
+                            for (uint j = 0; j < numParameters; j++)
+                            {
+                                parameters[j] = reader.ReadS15Fixed16();
+                            }
+
+                            curve = new ParametricToneCurve(functionType, parameters);
                         }
                         else
                         {
-                            var entries = new ushort[numEntries];
-                            for (uint j = 0; j < numEntries; j++)
-                            {
-                                entries[j] = reader.ReadUInt16();
-                            }
-
-                            curve = new LutToneCurve(entries);
+                            throw new ICCProfileException(tagSig + " is not of curveType or parametricCurveType");
                         }
 
                         result.trcs[index] = curve;

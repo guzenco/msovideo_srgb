@@ -91,6 +91,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="colorimetry\ParametricToneCurve.cs" />
     <Compile Include="colorimetry\ScaledToneCurve.cs" />
     <Compile Include="colorimetry\ST2084.cs" />
     <Compile Include="common\Attributes.cs" />
