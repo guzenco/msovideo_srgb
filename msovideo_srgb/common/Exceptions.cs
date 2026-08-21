@@ -6,9 +6,4 @@ namespace msovideo_srgb
     {
         public ICCProfileException(string message) : base(message) { }
     }
-
-    public class DisplayNotFoundException : InvalidOperationException
-    {
-        public DisplayNotFoundException(string message) : base(message) { }
-    }
 }

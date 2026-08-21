@@ -21,52 +21,14 @@ namespace msovideo_srgb
         private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO requestPacket);
 
         [DllImport("user32")]
-        private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_SOURCE_DEVICE_NAME requestPacket);
+        private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2 requestPacket);
 
         [DllImport("user32")]
         private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_TARGET_DEVICE_NAME requestPacket);
 
-        public static HashSet<string> GetHdrDisplayPaths()
+        public static List<Display> GetDisplays()
         {
-            Check(GetDisplayConfigBufferSizes(QDC.QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount));
-
-            var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
-            var modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
-
-            Check(QueryDisplayConfig(QDC.QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero));
-
-            var result = new HashSet<string>();
-
-            foreach (var path in paths)
-            {
-                var displayInfo = new DISPLAYCONFIG_TARGET_DEVICE_NAME();
-                displayInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
-                displayInfo.header.size = Marshal.SizeOf<DISPLAYCONFIG_TARGET_DEVICE_NAME>();
-                displayInfo.header.adapterId = path.targetInfo.adapterId;
-                displayInfo.header.id = path.targetInfo.id;
-
-                Check(DisplayConfigGetDeviceInfo(ref displayInfo));
-
-                var colorInfo = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO();
-                colorInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
-                colorInfo.header.size = Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>();
-                colorInfo.header.adapterId = path.targetInfo.adapterId;
-                colorInfo.header.id = path.targetInfo.id;
-
-                Check(DisplayConfigGetDeviceInfo(ref colorInfo));
-
-                if (colorInfo.advancedColorEnabled)
-                {
-                    result.Add(displayInfo.monitorDevicePath);
-                }
-            }
-
-            return result;
-        }
-
-        internal static Dictionary<string, Tuple<LUID, uint>> FindAdapterAndSourceIds()
-        {
-            var map = new Dictionary<string, Tuple<LUID, uint>>();
+            var map = new List<Display>();
 
             int hr = GetDisplayConfigBufferSizes(QDC.QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount);
 
@@ -94,18 +56,50 @@ namespace msovideo_srgb
 
                 if (hr != 0) continue;
 
-                map.Add(targetName.monitorDevicePath, Tuple.Create(source.adapterId, source.id));
+                Display display = new Display();
+
+                display.DevicePath = targetName.monitorDevicePath;
+                display.FriendlyDeviceName = targetName.monitorFriendlyDeviceName;
+
+                display.IsSourceUnique = paths.Count(p => p.sourceInfo.Equals(source)) == 1;
+
+                display.SourceAdapterId = source.adapterId;
+                display.SourceId = source.id;
+
+                var colorInfo2 = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2();
+                colorInfo2.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2;
+                colorInfo2.header.size = Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2>();
+                colorInfo2.header.adapterId = path.targetInfo.adapterId;
+                colorInfo2.header.id = path.targetInfo.id;
+
+                hr = DisplayConfigGetDeviceInfo(ref colorInfo2);
+
+                if (hr == 0)
+                {
+                    display.AcmActive = colorInfo2.activeColorMode == DISPLAYCONFIG_ADVANCED_COLOR_MODE.DISPLAYCONFIG_ADVANCED_COLOR_MODE_WCG;
+                    display.HdrActive = colorInfo2.activeColorMode == DISPLAYCONFIG_ADVANCED_COLOR_MODE.DISPLAYCONFIG_ADVANCED_COLOR_MODE_HDR;
+                }
+                else
+                {
+                    var colorInfo = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO();
+                    colorInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
+                    colorInfo.header.size = Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>();
+                    colorInfo.header.adapterId = path.targetInfo.adapterId;
+                    colorInfo.header.id = path.targetInfo.id;
+
+                    hr = DisplayConfigGetDeviceInfo(ref colorInfo);
+
+                    if (hr == 0)
+                    {
+                        display.AcmActive = colorInfo.advancedColorEnabled;
+                        display.HdrActive = colorInfo.advancedColorEnabled;
+                    }
+                }
+
+                map.Add(display);
             }
 
             return map;
-        }
-
-        private static void Check(int e)
-        {
-            if (e != 0)
-            {
-                throw new Win32Exception(e);
-            }
         }
     }
 
@@ -122,6 +116,7 @@ namespace msovideo_srgb
         DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO = 9,
         DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE = 10,
         DISPLAYCONFIG_DEVICE_INFO_GET_SDR_WHITE_LEVEL = 11,
+        DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2 = 15,
     }
 
     internal enum DISPLAYCONFIG_COLOR_ENCODING
@@ -237,6 +232,13 @@ namespace msovideo_srgb
         DISPLAYCONFIG_MODE_INFO_TYPE_DESKTOP_IMAGE = 3,
     }
 
+    internal enum DISPLAYCONFIG_ADVANCED_COLOR_MODE
+    {
+        DISPLAYCONFIG_ADVANCED_COLOR_MODE_SDR = 0,
+        DISPLAYCONFIG_ADVANCED_COLOR_MODE_WCG = 1,
+        DISPLAYCONFIG_ADVANCED_COLOR_MODE_HDR = 2,
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct DISPLAYCONFIG_DEVICE_INFO_HEADER
     {
@@ -254,10 +256,31 @@ namespace msovideo_srgb
         public DISPLAYCONFIG_COLOR_ENCODING colorEncoding;
         public int bitsPerColorChannel;
 
-        public bool advancedColorSupported => (value & 0x1) == 0x1;
-        public bool advancedColorEnabled => (value & 0x2) == 0x2;
-        public bool wideColorEnforced => (value & 0x4) == 0x4;
-        public bool advancedColorForceDisabled => (value & 0x8) == 0x8;
+        public bool advancedColorSupported => (value & 1 << 0) != 0;
+        public bool advancedColorEnabled => (value & 1 << 1) != 0;
+        public bool wideColorEnforced => (value & 1 << 2) != 0;
+        public bool advancedColorForceDisabled => (value & 1 << 3) != 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2
+    {
+        public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
+        public uint value;
+        public DISPLAYCONFIG_COLOR_ENCODING colorEncoding;
+        public int bitsPerColorChannel;
+        public DISPLAYCONFIG_ADVANCED_COLOR_MODE activeColorMode;
+
+        public bool advancedColorSupported => (value & 1 << 0) != 0;
+        public bool advancedColorEnabled => (value & 1 << 1) != 0;
+
+        public bool advancedColorLimitedByPolicy => (value & 1 << 3) != 0;
+
+        public bool highDynamicRangeSupported => (value & 1 << 4) != 0;
+        public bool highDynamicRangeUserEnabled => (value & 1 << 5) != 0;
+
+        public bool wideColorSupported => (value & 1 << 6) != 0;
+        public bool wideColorUserEnabled => (value & 1 << 7) != 0;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -268,7 +291,7 @@ namespace msovideo_srgb
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct LUID
+    public struct LUID
     {
         public uint LowPart;
         public int HighPart;

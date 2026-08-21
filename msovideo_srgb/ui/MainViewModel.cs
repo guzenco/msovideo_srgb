@@ -111,16 +111,12 @@ namespace msovideo_srgb
             ActionScheduler.ClearAll();
             Monitors.Clear();
 
-            var hdrPaths = DisplayConfigManager.GetHdrDisplayPaths();
+            var displays = DisplayConfigManager.GetDisplays();
 
             var number = 1;
-            foreach (var display in WindowsDisplayAPI.Display.GetDisplays())
-            {
-                var path = display.DevicePath;
-
-                var hdrActive = hdrPaths.Contains(path);
-         
-                MonitorData monitor = new MonitorData(this, number++, display, path, hdrActive);
+            foreach (var display in displays)
+            {        
+                MonitorData monitor = new MonitorData(this, number++, display);
                 Config.LoadMonitorData(monitor);
 
                 Monitors.Add(monitor);

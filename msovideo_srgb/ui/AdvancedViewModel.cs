@@ -531,9 +531,9 @@ namespace msovideo_srgb
             !_monitor.IsUnique 
             ? Visibility.Visible : Visibility.Collapsed;
 
-        public Visibility HdrWarning =>
+        public Visibility AcmWarning =>
             MHC2NotSupportedWarning != Visibility.Visible &&
-            _monitor.HdrActive 
+            _monitor.AcmActive 
             ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility ProfilePathSDRWarning =>

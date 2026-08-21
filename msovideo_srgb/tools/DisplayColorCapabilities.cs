@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using WindowsDisplayAPI;
-
 namespace msovideo_srgb
 {
     public class DisplayColorCapabilities
@@ -20,12 +18,6 @@ namespace msovideo_srgb
         {
             try
             {
-                var adapterAndSourceIds = DisplayConfigManager.FindAdapterAndSourceIds();
-
-                if (!adapterAndSourceIds.ContainsKey(display.DevicePath)) return null;
-
-                LUID adapterId = adapterAndSourceIds[display.DevicePath].Item1;
-
                 Guid factoryGuid = typeof(IDXGIFactory1).GUID;
                 int hr = CreateDXGIFactory1(ref factoryGuid, out IDXGIFactory1 factory);
 
@@ -37,7 +29,7 @@ namespace msovideo_srgb
                 {
                     DXGI_ADAPTER_DESC1 adesc;
                     adapter.GetDesc1(out adesc);
-                    if (adesc.AdapterLuid.Equals(adapterId))
+                    if (adesc.AdapterLuid.Equals(display.SourceAdapterId))
                     {
                         uint outputIndex = 0;
                         IDXGIOutput output;
@@ -52,7 +44,7 @@ namespace msovideo_srgb
                                 IDXGIOutput6 output6 = (IDXGIOutput6)Marshal.GetObjectForIUnknown(output6Ptr);
                                 DXGI_OUTPUT_DESC1 desc1;
                                 hr = output6.GetDesc1(out desc1);
-                                if (hr == 0 && desc1.Base.DeviceName.Equals(display.DisplayName))
+                                if (hr == 0 && desc1.Base.DeviceName == display.SourceDeviceName)
                                 {
                                     ColorCapabilities colorCapabilities = new ColorCapabilities()
                                     {

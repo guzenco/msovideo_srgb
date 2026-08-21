@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using WindowsDisplayAPI;
 
 namespace msovideo_srgb
 {
@@ -138,12 +137,11 @@ namespace msovideo_srgb
 
         public static void AddAssociation(Display display, string profileName, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DevicePath);
             int hr = ColorProfileAddDisplayAssociation(
                 WcsProfileManagementScope.CurrentUser,
                 profileName,
-                luidAndSource.Item1,
-                luidAndSource.Item2,
+                display.SourceAdapterId,
+                display.SourceId,
                 false,
                 hdr);
 
@@ -152,23 +150,20 @@ namespace msovideo_srgb
 
         public static void RemoveAssociation(Display display, string profileName, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DevicePath);
             int hr = ColorProfileRemoveDisplayAssociation(
                 WcsProfileManagementScope.CurrentUser,
                 profileName,
-                luidAndSource.Item1,
-                luidAndSource.Item2,
+                display.SourceAdapterId,
+                display.SourceId,
                 hdr);
         }
         public static string GetProfile(Display display, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DevicePath);
-
             IntPtr profileNamePtr;
             int hr = ColorProfileGetDisplayDefault(
                 WcsProfileManagementScope.CurrentUser,
-                luidAndSource.Item1,
-                luidAndSource.Item2,
+                display.SourceAdapterId,
+                display.SourceId,
                 COLORPROFILETYPE.CPT_ICC,
                 hdr ? COLORPROFILESUBTYPE.CPST_EXTENDED_DISPLAY_COLOR_MODE : COLORPROFILESUBTYPE.CPST_STANDARD_DISPLAY_COLOR_MODE,
                 out profileNamePtr);
@@ -200,15 +195,13 @@ namespace msovideo_srgb
 
         public static void SetProfile(Display display, string profileName, bool hdr)
         {
-            var luidAndSource = FindAdapterAndSource(display.DevicePath);
-
             int hr = ColorProfileSetDisplayDefaultAssociation(
                 WcsProfileManagementScope.CurrentUser,
                 profileName,
                 COLORPROFILETYPE.CPT_ICC,
                 hdr ? COLORPROFILESUBTYPE.CPST_EXTENDED_DISPLAY_COLOR_MODE : COLORPROFILESUBTYPE.CPST_STANDARD_DISPLAY_COLOR_MODE,
-                luidAndSource.Item1,
-                luidAndSource.Item2);
+                display.SourceAdapterId,
+                display.SourceId);
 
             if (hr != 0)
             {
@@ -218,12 +211,10 @@ namespace msovideo_srgb
 
         public static WcsProfileManagementScope GetDisplayUserScope(Display display)
         {
-            var luidAndSource = FindAdapterAndSource(display.DevicePath);
-
             WcsProfileManagementScope scope;
             int hr = ColorProfileGetDisplayUserScope(
-                luidAndSource.Item1,
-                luidAndSource.Item2,
+                display.SourceAdapterId,
+                display.SourceId,
                 out scope);
 
             if (hr != 0)
@@ -237,7 +228,7 @@ namespace msovideo_srgb
         public static void SetDisplayUserScope(Display display, WcsProfileManagementScope usePerUserProfiles)
         {
             WcsSetUsePerUserProfiles(
-                display.DeviceKey,
+                display.GetDriver(),
                 CLASS_MONITOR,
                 usePerUserProfiles == WcsProfileManagementScope.CurrentUser
             );
@@ -250,20 +241,11 @@ namespace msovideo_srgb
                 return null;
             }
 
-            var adapterAndSourceIds = DisplayConfigManager.FindAdapterAndSourceIds();
-
-            if (!adapterAndSourceIds.ContainsKey(display.DevicePath))
-            {
-                return null;
-            }
-
-            var luidAndSource = adapterAndSourceIds[display.DevicePath];
-
             var outputCapabilities = new WCS_DEVICE_MHC2_CAPABILITIES();
             int hr = ColorProfileGetDeviceCapabilities(
                 WcsProfileManagementScope.CurrentUser,
-                luidAndSource.Item1,
-                luidAndSource.Item2,
+                display.SourceAdapterId,
+                display.SourceId,
                 WCS_DEVICE_CAPABILITIES_TYPE.MicrosoftHardwareColorV2,
                 ref outputCapabilities);
 
@@ -274,32 +256,5 @@ namespace msovideo_srgb
 
             return outputCapabilities.SupportsMhc2;
         }
-
-        public static bool IsDisplaySourceIdUnique(Display display)
-        {
-            var adapterAndSourceIds = DisplayConfigManager.FindAdapterAndSourceIds();
-
-            if (adapterAndSourceIds.ContainsKey(display.DevicePath))
-            {
-                var adapterAndSource = adapterAndSourceIds[display.DevicePath];
-                var counts = adapterAndSourceIds.Values.GroupBy(v => v).ToDictionary(g => g.Key, g => g.Count());
-                return counts[adapterAndSource] == 1;
-            }
-
-            return false;
-        }
-
-        internal static Tuple<LUID, uint> FindAdapterAndSource(string devicePath)
-        {
-            var adapterAndSourceIds = DisplayConfigManager.FindAdapterAndSourceIds();
-
-            if (adapterAndSourceIds.ContainsKey(devicePath))
-            { 
-                return adapterAndSourceIds[devicePath];
-            }
-
-            throw new DisplayNotFoundException("Display not found in DisplayConfig enumeration.");
-        }
     }
-
 }

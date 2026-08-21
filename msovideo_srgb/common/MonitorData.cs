@@ -5,10 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using EDIDParser;
-using EDIDParser.Descriptors;
-using EDIDParser.Enums;
-using Microsoft.Win32;
-using WindowsDisplayAPI;
 
 namespace msovideo_srgb
 {
@@ -20,23 +16,20 @@ namespace msovideo_srgb
 
         private MainViewModel _viewModel;
 
-        public MonitorData(MainViewModel viewModel, int number, Display display, string path, bool hdrActive)
+        public MonitorData(MainViewModel viewModel, int number, Display display)
         {
+            _clamped = false;
             _viewModel = viewModel;
-            Number = number;
 
-            Edid = GetEDID(path, display);
-
-            Name = Edid.Descriptors.OfType<StringDescriptor>()
-                .FirstOrDefault(x => x.Type == StringDescriptorType.MonitorName)?.Value ?? "<no name>";
-
+            Number = number;        
             Display = display;
-            Path = path;
+
+            Edid = Display.GetEDID();
+
             MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2));
             MHCProfileName = new string(MHCProfileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
-            HdrActive = hdrActive;
+
             IsSupportMHC2 = DisplayColorProfileManager.IsSupportMHC2(Display);
-            IsUnique = DisplayColorProfileManager.IsDisplaySourceIdUnique(Display);
 
             if (Edid != null)
             {
@@ -53,47 +46,12 @@ namespace msovideo_srgb
             {
                 EdidColorSpace = Colorimetry.sRGB;
             }
-
-            _clamped = false;
-            Clamp = false;
-            ProfilePath = "";
-            MaxLuminance = 80;
-            CustomGamma = 2.2;
-            CustomPercentage = 100;
-            UseVcgt = false;
-            OptimizeMatrix = true;
-            Resolution = 2;
-            ProfilePathHDR = "";
-            MinLuminanceHDR = 0;
-            TargetPeak = PeakLuminanceHDR = MaxFullFrameLuminanceHDR = 10000;
-            BPCThreshold = 80;
-            CustomWhiteX = CustomWhiteHdrX = Colorimetry.D65.X;
-            CustomWhiteY = CustomWhiteHdrY = Colorimetry.D65.Y;
-            ReportWhiteD65 = ReportColorSpaceSRGB = ReportGammaSRGB = false;
-        }
-
-        public static EDID GetEDID(string path, Display display)
-        {
-            try
-            {
-                var registryPath = "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\DISPLAY\\";
-                registryPath += string.Join("\\", path.Split('#').Skip(1).Take(2));
-                return new EDID((byte[])Registry.GetValue(registryPath + "\\Device Parameters", "EDID", null));
-            }
-            catch
-            {
-                return null;
-            }
         }
 
         public int Number { get; }
-        public string Name { get; }
         public EDID Edid { get; }
         public Display Display { get; }
-        public string Path { get; }
-        public bool HdrActive { get; }
         public bool? IsSupportMHC2 { get; }
-        public bool IsUnique { get; }
         public string MHCProfileName { get; }
         public string MHCProfileNameSDR => "[SDR] " + MHCProfileName + ".icm";
         public string MHCProfileNameHDR => "[HDR] " + MHCProfileName + ".icm";
@@ -248,9 +206,9 @@ namespace msovideo_srgb
                     createProfile = () =>
                     {
                         ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, TargetColorSpace, TargetWhitePoint,
-                                reportWhiteD65: ReportWhiteD65 || HdrActive,
-                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
-                                reportGammaSRGB: ReportGammaSRGB && !HdrActive);
+                                reportWhiteD65: ReportWhiteD65 || AcmActive,
+                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !AcmActive,
+                                reportGammaSRGB: ReportGammaSRGB && !AcmActive);
                     };
                 }
                 else if (UseIcc)
@@ -304,7 +262,7 @@ namespace msovideo_srgb
 
                     if (ExcludeHdrMetadata)
                     {
-                        if (HdrActive)
+                        if (AcmActive)
                         {
                             var colorCapabilities = DisplayColorCapabilities.GetColorCapabilities(Display);
                             if (colorCapabilities != null)
@@ -323,12 +281,12 @@ namespace msovideo_srgb
                     createProfile =() =>
                     {
                         ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance,
-                                reportWhiteD65: ReportWhiteD65 || HdrActive,
-                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !HdrActive,
-                                reportGammaSRGB: ReportGammaSRGB && !HdrActive,
+                                reportWhiteD65: ReportWhiteD65 || AcmActive,
+                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !AcmActive,
+                                reportGammaSRGB: ReportGammaSRGB && !AcmActive,
                                 useVcgt: UseVcgt,
                                 optimizeMatrix: OptimizeMatrix,
-                                acmMode: HdrActive,
+                                acmMode: AcmActive,
                                 gamma: gamma,
                                 peakLuminanceOverride: PeakLuminance,
                                 maxFullFrameLuminanceOverride: MaxFullFrameLuminance,
@@ -396,8 +354,6 @@ namespace msovideo_srgb
         private void HandleClampException(Exception e)
         {
             ActionScheduler.Clear(Path);
-
-            if (e is DisplayNotFoundException) return;
             MessageBox.Show(e.Message);
 
             try
@@ -459,7 +415,15 @@ namespace msovideo_srgb
             }
         }
 
-        public string Mode => HdrActive ? "HDR/ACM " : "SDR";
+        public string Name => Display.FriendlyDeviceName;
+        public string Path => Display.DevicePath;
+
+        public bool IsUnique => Display.IsSourceUnique;
+
+        public bool HdrActive => Display.HdrActive;
+        public bool AcmActive => Display.AcmActive;
+
+        public string Mode => HdrActive && AcmActive ? "HDR/ACM" : HdrActive ? "HDR" : AcmActive ? "ACM" : "SDR";
 
         public bool CanClamp => IsSupportMHC2 != false && IsUnique && (CanClampSDR || CanClampHDR);
 
@@ -603,7 +567,7 @@ namespace msovideo_srgb
 
         public Colorimetry.ColorSpace EdidColorSpace { get; }
 
-        private Colorimetry.ColorSpace TargetColorSpace => !HdrActive ? Colorimetry.ColorSpaces[Target]: Colorimetry.Native;
+        private Colorimetry.ColorSpace TargetColorSpace => !AcmActive ? Colorimetry.ColorSpaces[Target]: Colorimetry.Native;
 
         private uint[] Resolutions = new uint[] { 256, 1024, 4096 };
         private uint CurveResolution => Resolutions[Resolution];
