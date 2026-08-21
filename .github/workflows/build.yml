@@ -54,9 +54,11 @@ jobs:
           $path = "output"
           New-Item -ItemType Directory -Force -Path $path
           Copy-Item -Path "msovideo_srgb\bin\x64\Release\*.exe" -Destination $path -Force
-          Copy-Item -Path "msovideo_srgb\bin\x64\Release\*.dll" -Destination $path -Force
-          Copy-Item -Path "LICENSE" -Destination $path -Force
-          Copy-Item -Path "LICENSE-THIRD-PARTY" -Destination $path -Force
+          $dlls= "msovideo_srgb\bin\x64\Release\*.dll"
+          if (Test-Path $dlls) {
+            Copy-Item -Path $dlls -Destination $path -Force
+          }
+          Copy-Item -Path "LICENSE*" -Destination $path -Force
 
       - name: Create build archive
         run: |

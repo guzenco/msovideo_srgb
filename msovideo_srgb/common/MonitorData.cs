@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
-using EDIDParser;
 
 namespace msovideo_srgb
 {
@@ -30,22 +29,6 @@ namespace msovideo_srgb
             MHCProfileName = new string(MHCProfileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
 
             IsSupportMHC2 = DisplayColorProfileManager.IsSupportMHC2(Display);
-
-            if (Edid != null)
-            {
-                var coords = Edid.DisplayParameters.ChromaticityCoordinates;
-                EdidColorSpace = new Colorimetry.ColorSpace
-                {
-                    Red = new Colorimetry.Point { X = Math.Round(coords.RedX, 3), Y = Math.Round(coords.RedY, 3) },
-                    Green = new Colorimetry.Point { X = Math.Round(coords.GreenX, 3), Y = Math.Round(coords.GreenY, 3) },
-                    Blue = new Colorimetry.Point { X = Math.Round(coords.BlueX, 3), Y = Math.Round(coords.BlueY, 3) },
-                    White = Colorimetry.D65
-                };
-            }
-            else
-            {
-                EdidColorSpace = Colorimetry.sRGB;
-            }
         }
 
         public int Number { get; }
@@ -564,8 +547,6 @@ namespace msovideo_srgb
         [Persistent("min_luminance_hdr", 0)]
         [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.OverrideMetadataHDR))]
         public double MinLuminanceHDR { set; get; }
-
-        public Colorimetry.ColorSpace EdidColorSpace { get; }
 
         private Colorimetry.ColorSpace TargetColorSpace => !AcmActive ? Colorimetry.ColorSpaces[Target]: Colorimetry.Native;
 

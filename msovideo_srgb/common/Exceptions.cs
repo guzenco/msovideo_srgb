@@ -6,4 +6,9 @@ namespace msovideo_srgb
     {
         public ICCProfileException(string message) : base(message) { }
     }
+
+    public class EDIDException : FormatException
+    {
+        public EDIDException(string message) : base(message) { }
+    }
 }

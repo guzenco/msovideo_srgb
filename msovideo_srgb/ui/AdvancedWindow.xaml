@@ -106,39 +106,39 @@
                                     </Grid.RowDefinitions>
                                     <Label HorizontalAlignment="Right" Grid.Row="0" Grid.Column="0">Red</Label>
                                     <TextBox IsEnabled="False"
-                                         Text="{Binding Coords.RedX, Mode=OneWay, StringFormat={}{0:#,0.000}}"
+                                         Text="{Binding Edid.RedX, Mode=OneWay, StringFormat={}{0:#,0.000}}"
                                          IsReadOnly="True"
                                          Grid.Row="0" Grid.Column="1"
                                          VerticalAlignment="Center" />
                                     <Label Grid.Row="0" Grid.Column="2">x</Label>
                                     <TextBox IsEnabled="False"
-                                         Text="{Binding Coords.RedY, Mode=OneWay, StringFormat={}{0:#,0.000}}"
+                                         Text="{Binding Edid.RedY, Mode=OneWay, StringFormat={}{0:#,0.000}}"
                                          IsReadOnly="True"
                                          Grid.Row="0" Grid.Column="3"
                                          VerticalAlignment="Center" />
                                     <Label Grid.Row="0" Grid.Column="4">y</Label>
                                     <Label HorizontalAlignment="Right" Grid.Row="1" Grid.Column="0">Green</Label>
                                     <TextBox IsEnabled="False"
-                                         Text="{Binding Coords.GreenX, Mode=OneWay, StringFormat={}{0:#,0.000}}"
+                                         Text="{Binding Edid.GreenX, Mode=OneWay, StringFormat={}{0:#,0.000}}"
                                          IsReadOnly="True"
                                          Grid.Row="1" Grid.Column="1"
                                          VerticalAlignment="Center" />
                                     <Label Grid.Row="1" Grid.Column="2">x</Label>
                                     <TextBox IsEnabled="False"
-                                         Text="{Binding Coords.GreenY, Mode=OneWay, StringFormat={}{0:#,0.000}}"
+                                         Text="{Binding Edid.GreenY, Mode=OneWay, StringFormat={}{0:#,0.000}}"
                                          IsReadOnly="True"
                                          Grid.Row="1" Grid.Column="3"
                                          VerticalAlignment="Center" />
                                     <Label Grid.Row="1" Grid.Column="4">y</Label>
                                     <Label HorizontalAlignment="Right" Grid.Row="2" Grid.Column="0">Blue</Label>
                                     <TextBox IsEnabled="False"
-                                         Text="{Binding Coords.BlueX, Mode=OneWay, StringFormat={}{0:#,0.000}}"
+                                         Text="{Binding Edid.BlueX, Mode=OneWay, StringFormat={}{0:#,0.000}}"
                                          IsReadOnly="True"
                                          Grid.Row="2" Grid.Column="1"
                                          VerticalAlignment="Center" />
                                     <Label Grid.Row="2" Grid.Column="2">x</Label>
                                     <TextBox IsEnabled="False"
-                                         Text="{Binding Coords.BlueY, Mode=OneWay, StringFormat={}{0:#,0.000}}"
+                                         Text="{Binding Edid.BlueY, Mode=OneWay, StringFormat={}{0:#,0.000}}"
                                          IsReadOnly="True"
                                          Grid.Row="2" Grid.Column="3"
                                          VerticalAlignment="Center" />

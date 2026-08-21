@@ -1,4 +1,3 @@
-﻿using EDIDParser;
 using Microsoft.Win32;
 using System.Linq;
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using EDIDParser;
 
 namespace msovideo_srgb
 {
@@ -109,18 +108,26 @@ namespace msovideo_srgb
 
             AddDesc(profileGenerator, profileName);
 
-            var coords = edid.DisplayParameters.ChromaticityCoordinates;
-            Colorimetry.ColorSpace edidColorSpace = new Colorimetry.ColorSpace
+            Colorimetry.ColorSpace edidColorSpace;
+            double edidGamma;
+            if (edid != null)
             {
-                Red = new Colorimetry.Point { X = Math.Round(coords.RedX, 3), Y = Math.Round(coords.RedY, 3) },
-                Green = new Colorimetry.Point { X = Math.Round(coords.GreenX, 3), Y = Math.Round(coords.GreenY, 3) },
-                Blue = new Colorimetry.Point { X = Math.Round(coords.BlueX, 3), Y = Math.Round(coords.BlueY, 3) },
-                White = Colorimetry.D65
-            };
-            double edidGamma = edid.DisplayParameters.DisplayGamma;
+                edidColorSpace = edid.ColorSpace;
+                edidGamma = edid.Gamma;
+
+                edidColorSpace.White = Colorimetry.D65;
+
+                profileGenerator.SetManufacturerID(edid.ManufacturerId);
+                profileGenerator.SetDeviceModel(edid.ProductCodeId);
+            }
+            else
+            {
+                edidColorSpace = Colorimetry.sRGB;
+                edidGamma = 2.2;
+            }
 
             profileGenerator.SetManufacturerID(edid.ManufacturerId);
-            profileGenerator.setDeviceModel(edid.ProductCode);
+            profileGenerator.SetDeviceModel(edid.ProductCodeId);
 
             Matrix chromaticAdaptation = Colorimetry.WhiteToWhiteAdaptation(Colorimetry.RGBToXYZ(Colorimetry.D65), Colorimetry.D50);
             profileGenerator.AddTag("chad", ICCProfileGenerator.MakeMatrixTag(chromaticAdaptation));
@@ -160,19 +167,14 @@ namespace msovideo_srgb
             double edidGamma;
             if (edid != null)
             {
-                var coords = edid.DisplayParameters.ChromaticityCoordinates;
-                edidColorSpace = new Colorimetry.ColorSpace
-                {
-                    Red = new Colorimetry.Point { X = Math.Round(coords.RedX, 3), Y = Math.Round(coords.RedY, 3) },
-                    Green = new Colorimetry.Point { X = Math.Round(coords.GreenX, 3), Y = Math.Round(coords.GreenY, 3) },
-                    Blue = new Colorimetry.Point { X = Math.Round(coords.BlueX, 3), Y = Math.Round(coords.BlueY, 3) },
-                    White = Colorimetry.D65
-                };
-                edidWhite = new Colorimetry.Point { X = Math.Round(coords.WhiteX, 3), Y = Math.Round(coords.WhiteY, 3) };
-                edidGamma = edid.DisplayParameters.DisplayGamma;
+                edidColorSpace = edid.ColorSpace;
+                edidWhite = edidColorSpace.White;
+                edidGamma = edid.Gamma;
+
+                edidColorSpace.White = Colorimetry.D65;
 
                 profileGenerator.SetManufacturerID(edid.ManufacturerId);
-                profileGenerator.setDeviceModel(edid.ProductCode);
+                profileGenerator.SetDeviceModel(edid.ProductCodeId);
             }
             else
             {
@@ -255,7 +257,7 @@ namespace msovideo_srgb
             if (edid != null)
             {
                 profileGenerator.SetManufacturerID(edid.ManufacturerId);
-                profileGenerator.setDeviceModel(edid.ProductCode);
+                profileGenerator.SetDeviceModel(edid.ProductCodeId);
             }
 
             Matrix targetWhite;

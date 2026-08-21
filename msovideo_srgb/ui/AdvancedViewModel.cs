@@ -5,7 +5,6 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
-using EDIDParser;
 
 namespace msovideo_srgb
 {
@@ -149,7 +148,7 @@ namespace msovideo_srgb
             }
         }
 
-        public ChromaticityCoordinates Coords => _monitor.Edid.DisplayParameters.ChromaticityCoordinates;
+        public EDID Edid => _monitor.Edid;
 
         public bool UseEdid
         {

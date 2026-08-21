@@ -37,7 +37,7 @@ namespace msovideo_srgb
             manufacturerID = id;
         }
 
-        public void setDeviceModel(uint model)
+        public void SetDeviceModel(uint model)
         {
             deviceModel = model;
         }

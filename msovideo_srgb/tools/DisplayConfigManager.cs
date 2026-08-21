@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -22,6 +21,9 @@ namespace msovideo_srgb
 
         [DllImport("user32")]
         private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2 requestPacket);
+
+        [DllImport("user32")]
+        private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_SOURCE_DEVICE_NAME requestPacket);
 
         [DllImport("user32")]
         private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_TARGET_DEVICE_NAME requestPacket);
@@ -66,11 +68,24 @@ namespace msovideo_srgb
                 display.SourceAdapterId = source.adapterId;
                 display.SourceId = source.id;
 
+                var sourceDeviceName = new DISPLAYCONFIG_SOURCE_DEVICE_NAME();
+                sourceDeviceName.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+                sourceDeviceName.header.size = Marshal.SizeOf<DISPLAYCONFIG_SOURCE_DEVICE_NAME>();
+                sourceDeviceName.header.adapterId = source.adapterId;
+                sourceDeviceName.header.id = source.id;
+                
+                hr = DisplayConfigGetDeviceInfo(ref sourceDeviceName);
+
+                if (hr == 0)
+                {
+                    display.SourceDeviceName = sourceDeviceName.viewGdiDeviceName;
+                }
+
                 var colorInfo2 = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2();
                 colorInfo2.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2;
                 colorInfo2.header.size = Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2>();
-                colorInfo2.header.adapterId = path.targetInfo.adapterId;
-                colorInfo2.header.id = path.targetInfo.id;
+                colorInfo2.header.adapterId = target.adapterId;
+                colorInfo2.header.id = target.id;
 
                 hr = DisplayConfigGetDeviceInfo(ref colorInfo2);
 
@@ -84,8 +99,8 @@ namespace msovideo_srgb
                     var colorInfo = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO();
                     colorInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
                     colorInfo.header.size = Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>();
-                    colorInfo.header.adapterId = path.targetInfo.adapterId;
-                    colorInfo.header.id = path.targetInfo.id;
+                    colorInfo.header.adapterId = target.adapterId;
+                    colorInfo.header.id = target.id;
 
                     hr = DisplayConfigGetDeviceInfo(ref colorInfo);
 

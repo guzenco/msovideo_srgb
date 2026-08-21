@@ -59,10 +59,6 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EDIDParser, Version=1.2.5.3, Culture=neutral, PublicKeyToken=310fd07b25df79b3">
-      <HintPath>..\packages\EDIDParser.1.2.5.4\lib\net45\EDIDParser.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -92,6 +88,7 @@
     <Compile Include="colorimetry\ST2084.cs" />
     <Compile Include="common\Attributes.cs" />
     <Compile Include="common\Display.cs" />
+    <Compile Include="common\EDID.cs" />
     <Compile Include="common\Hotkey.cs" />
     <Compile Include="common\Preset.cs" />
     <Compile Include="common\SettingsSourceMap.cs" />
@@ -168,7 +165,6 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
