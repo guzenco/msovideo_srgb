@@ -240,41 +240,29 @@ namespace msovideo_srgb
 
         public void OnProperiesChanged(MonitorData monitor, string[] properties)
         {
+            Config.SaveMonitorData(monitor);
+            Config.SafeSave();
+
             var sameSourceProperties = ActivePreset.SettingsSourceMap.GetSameSourceProperties();
             if (properties.Any(p => sameSourceProperties.Contains(p)))
             {
-                Config.SaveMonitorData(monitor);
                 UpdateMonitors();
             }
             else
             {
-                SaveConfig();
                 monitor?.ReapplyClamp();
             }
         }
 
         public void OnClampChanged(MonitorData monitor)
         {
+            Config.SaveMonitorData(monitor);
+            Config.SafeSave();
+
             if (ActivePreset.SettingsSourceMap.GetSameSourceProperties().Contains(nameof(MonitorData.Clamp)))
-            {
-                Config.SaveMonitorData(monitor);
-                Config.SafeSave();
+            {    
                 UpdateMonitors();
             }
-            else
-            {
-                SaveConfig();
-            }
-        }
-
-        public void SaveConfig()
-        {    
-            foreach (var m in Monitors)
-            {
-                Config.SaveMonitorData(m); 
-            }
-
-            Config.SafeSave();           
         }
 
         protected void OnPropertyChanged(string propertyName)

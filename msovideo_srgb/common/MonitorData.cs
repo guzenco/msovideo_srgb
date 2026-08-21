@@ -25,7 +25,15 @@ namespace msovideo_srgb
 
             Edid = Display.GetEDID();
 
-            MHCProfileName = Name + " " + string.Join("#", Path.Split('#').Skip(1).Take(2));
+            if (Display.HaveFriendlyDeviceName)
+            {
+                MHCProfileName =  $"{Display.FriendlyDeviceName} {Display.DeviceID}#{Display.InstanceID}";
+            }
+            else
+            {
+                MHCProfileName = $"{Display.DeviceID}#{Display.InstanceID}";
+            }
+
             MHCProfileName = new string(MHCProfileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
 
             IsSupportMHC2 = DisplayColorProfileManager.IsSupportMHC2(Display);
@@ -398,7 +406,7 @@ namespace msovideo_srgb
             }
         }
 
-        public string Name => Display.FriendlyDeviceName;
+        public string Name => Display.HaveFriendlyDeviceName ? Display.FriendlyDeviceName : Display.DeviceID;
         public string Path => Display.DevicePath;
 
         public bool IsUnique => Display.IsSourceUnique;

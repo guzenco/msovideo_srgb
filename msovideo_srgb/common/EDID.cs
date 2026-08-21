@@ -11,6 +11,7 @@ namespace msovideo_srgb
 
         public EDID(byte[] data)
         {
+            if (data == null) throw new EDIDException("EDID data is null");
             if (data.Length < 128) throw new EDIDException("EDID data length < 128 bytes");
             if (!data.Take(8).SequenceEqual(Header)) throw new EDIDException("EDID header mismatch");
             if ((data.Take(127).Sum(b => b) & 0xFF) == data[127]) throw new EDIDException("EDID checksum missmatch");

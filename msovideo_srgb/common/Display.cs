@@ -1,5 +1,4 @@
 using Microsoft.Win32;
-using System.Linq;
 
 namespace msovideo_srgb
 {
@@ -16,7 +15,12 @@ namespace msovideo_srgb
         public bool HdrActive { get; set; }
         public bool AcmActive { get; set; }
 
-        public string RegistryPath => "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\DISPLAY\\" + string.Join("\\", DevicePath.Split('#').Skip(1).Take(2));
+        public bool HaveFriendlyDeviceName => !string.IsNullOrWhiteSpace(FriendlyDeviceName);
+
+        public string DeviceID => DevicePath.Split('#')[1];
+        public string InstanceID => DevicePath.Split('#')[2];
+
+        public string RegistryPath => $"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\DISPLAY\\{DeviceID}\\{InstanceID}";
 
         public string GetDriver()
         {
