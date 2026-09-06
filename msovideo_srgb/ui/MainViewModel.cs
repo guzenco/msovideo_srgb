@@ -38,7 +38,7 @@ namespace msovideo_srgb
             GlobalEventsObserver.Init();
 
             UpdatePresets();
-            UpdateMonitors();
+            UpdateMonitorsHard();
         }
 
         public bool? RunAtStartup
@@ -88,8 +88,10 @@ namespace msovideo_srgb
             {
                 var preset = value;
 
-                if (preset != null && Presets.Count > 0 && preset != ActivePreset) {
+                if (preset == null || Presets.Count == 0) return;
 
+                if (preset != ActivePreset)
+                {
                     if (preset.Id == -1)
                     {
                         Config.AddPreset();
@@ -103,10 +105,21 @@ namespace msovideo_srgb
                     UpdateMonitors();
                     OnPropertyChanged(nameof(ActivePreset));
                 }
+                else
+                {
+                    ReapplyAll();
+                }
             }
         }
 
-        private void UpdateMonitors()
+        private void UpdateMonitorsHard()
+        {
+            UpdateMonitors(false);
+            RemoveWrongProfileAssociations();
+            ReapplyAll();
+        }
+
+        private void UpdateMonitors(bool reaply = true)
         {
             ActionScheduler.ClearAll();
             Monitors.Clear();
@@ -115,14 +128,17 @@ namespace msovideo_srgb
 
             var number = 1;
             foreach (var display in displays)
-            {        
+            {
                 MonitorData monitor = new MonitorData(this, number++, display);
                 Config.LoadMonitorData(monitor);
 
                 Monitors.Add(monitor);
             }
 
-            ReapplyAll();
+            if (reaply)
+            {
+                ReapplyAll();
+            }
         }
         
         private void UpdatePresets()
@@ -199,6 +215,15 @@ namespace msovideo_srgb
             }
         }
 
+        public void RemoveWrongProfileAssociations()
+        {
+            try
+            {
+                DisplayColorProfileManager.RemoveWrongProfileAssociations(Monitors.Select(m => m.Display).ToArray());
+            }
+            catch (Exception) { }
+        }
+
         public void ReapplyAll()
         {
             try
@@ -218,7 +243,7 @@ namespace msovideo_srgb
             Thread.Sleep(1000);
             if (_updateId == id)
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(UpdateMonitors);
+                System.Windows.Application.Current.Dispatcher.Invoke(UpdateMonitorsHard);
             }
         }
 

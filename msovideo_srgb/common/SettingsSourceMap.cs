@@ -7,6 +7,10 @@ namespace msovideo_srgb
 {
     public class SettingsSourceMap
     {
+        [Description("Applicator")]
+        [Persistent("source_applicator", (uint)Source.SEPARATE)]
+        public uint Applicator { get; set; }
+
         [Description("Clamp")]
         [Persistent("source_clamp", (uint)Source.SEPARATE)]     
         public uint Clamp { get; set; }
@@ -66,6 +70,8 @@ namespace msovideo_srgb
         [Description("Override HDR staic metadata")]
         [Persistent("source_override_metadata_hdr", (uint)Source.SEPARATE)]
         public uint OverrideMetadataHDR { get; set; }
+
+        public uint Dithering => (uint)Source.SEPARATE_GLOBAL;
 
         public List<Setting> Settings { get; set; }
 

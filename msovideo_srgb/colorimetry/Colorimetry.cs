@@ -30,6 +30,14 @@ namespace msovideo_srgb
 
         public struct ColorSpace
         {
+            public ColorSpace(Matrix primaries)
+            {
+                Red = XYZToXY(primaries, 0);
+                Green = XYZToXY(primaries, 1);
+                Blue = XYZToXY(primaries, 2);
+                White = XYZToXY(primaries * Matrix.One3x1());
+            }
+
             public bool Equals(ColorSpace other)
             {
                 return Red.Equals(other.Red) && Green.Equals(other.Green) && Blue.Equals(other.Blue) &&
@@ -109,6 +117,22 @@ namespace msovideo_srgb
             { 0.0389, -0.0685, 1.0296 }
         });
 
+        public static Point XYZToXY(Matrix valueXYZ, int column = 0)
+        {
+            double div = (valueXYZ[0, column] + valueXYZ[1, column] + valueXYZ[2, column]);
+            if (div == 0) return new Point { X = double.NaN, Y = double.NaN };
+
+            double x = valueXYZ[0, column] / div;
+            double y = valueXYZ[1, column] / div;
+
+            return new Point { X = x, Y = y};
+        }
+
+        public static Matrix XYToXYZ(Point point)
+        {
+            return Matrix.FromValues(new[,] { { point.X / point.Y }, { 1 }, { (1 - point.X - point.Y) / point.Y } });
+        }
+
         public static Matrix RGBToXYZ(ColorSpace colorSpace)
         {
             var red = colorSpace.Red;
@@ -128,37 +152,14 @@ namespace msovideo_srgb
             return Mprime * Matrix.FromDiagonal(Mprime.Inverse() * whiteXYZ);
         }
 
-        public static Matrix RGBToXYZ(Point point)
-        {
-            var valueXYZ = Matrix.FromValues(new[,]   { { point.X / point.Y }, { 1 }, { (1 - point.X - point.Y) / point.Y } });
-
-            return valueXYZ;
-        }
-
         public static Matrix XYZToRGB(ColorSpace colorSpace)
         {
             return RGBToXYZ(colorSpace).Inverse();
         }
 
-        public static Matrix RGBToRGB(ColorSpace from, ColorSpace to)
-        {
-            var result = XYZToRGB(to) * RGBToXYZ(from);
-            return result;
-        }
-
         public static Matrix RGBToAdaptedXYZ(ColorSpace colorspace, Matrix whiteXYZ)
         {
-            var xyz = RGBToXYZ(colorspace);
-
-            var ws = colorspace.White;
-            var aws = Badford * Matrix.FromValues(new[,]
-            {
-                { ws.X / ws.Y }, { 1 }, { (1 - ws.X - ws.Y) / ws.Y }
-            });
-            var awd = Badford * whiteXYZ;
-            var m = Badford.Inverse() * Matrix.FromDiagonal(new[]
-                { awd[0] / aws[0], awd[1] / aws[1], awd[2] / aws[2] }) * Badford;
-            return m * xyz;
+            return XYZAdapt(RGBToXYZ(colorspace), XYToXYZ(colorspace.White), whiteXYZ);
         }
 
         public static Matrix RGBToPCSXYZ(ColorSpace colorspace)
@@ -191,16 +192,25 @@ namespace msovideo_srgb
             return XYZScale(matrix, D50);
         }
 
-
-        public static Matrix CreateMatrix(ColorSpace origin, ColorSpace target)
+        public static Matrix XYZAdapt(Matrix matrix, Matrix fromWhite, Matrix toWhite)
         {
-            return RGBToXYZ(target) * XYZToRGB(origin);
+            return WhiteToWhiteAdaptation(fromWhite, toWhite) * matrix;
         }
 
-        public static Matrix WhiteToWhiteAdaptation(Matrix sourceWhite, Matrix targetWhite)
+        public static Matrix PCSXYZToXYZ(Matrix matrix, Matrix white)
         {
-            var sourceCone = Badford * sourceWhite;
-            var targetCone = Badford * targetWhite;
+            return XYZAdapt(matrix, D50, white);
+        }
+
+        public static Matrix XYZToPCSXYZ(Matrix matrix, Matrix white)
+        {
+            return XYZAdapt(matrix, white, D50);
+        }
+
+        public static Matrix WhiteToWhiteAdaptation(Matrix fromWhite, Matrix toWhite)
+        {
+            var sourceCone = Badford * fromWhite;
+            var targetCone = Badford * toWhite;
 
             var scale = Matrix.FromDiagonal(new[]
             {
@@ -212,20 +222,25 @@ namespace msovideo_srgb
             return Badford.Inverse() * scale * Badford;
         }
 
-        public static Matrix CreateMatrix(Matrix origin, ColorSpace target)
+        public static Matrix XYZToXYZ(ColorSpace source, ColorSpace destination)
         {
-            return RGBToXYZ(target) * origin.Inverse() * WhiteToWhiteAdaptation(RGBToXYZ(D65), D50);
+            return RGBToXYZ(source) * XYZToRGB(destination);
         }
 
-        public static Matrix CreateWhiteMatrix(Matrix origin, Matrix whitePoint, Matrix targetWhitePoint)
+        public static Matrix RGBToRGB(ColorSpace source,ColorSpace destination)
         {
-            Matrix matrixWhite = Matrix.FromDiagonal(XYZScale(origin * WhiteToWhiteAdaptation(D50, whitePoint), whitePoint).Inverse() * targetWhitePoint);
-            return matrixWhite / matrixWhite.Max();
+            return XYZToRGB(destination) * RGBToXYZ(source);
         }
 
-        public static Matrix CreateWhiteMatrix(Matrix origin, Matrix whitePoint, Point targetWhitePoint)
+        public static Matrix RGBGainsForWhite(Matrix originPCS, Matrix whitePoint, Matrix targetWhitePoint)
         {
-            return CreateWhiteMatrix(origin, whitePoint, RGBToXYZ(targetWhitePoint));
+            Matrix rgbGains = PCSXYZToXYZ(originPCS, whitePoint).Inverse() * targetWhitePoint;
+            return rgbGains / rgbGains.Max();
+        }
+
+        public static Matrix RGBGainsForWhite(Matrix originPCS, Matrix whitePoint, Point targetWhitePoint)
+        {
+            return RGBGainsForWhite(originPCS, whitePoint, XYToXYZ(targetWhitePoint));
         }
     }
 }

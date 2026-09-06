@@ -87,23 +87,28 @@
     <Compile Include="colorimetry\ScaledToneCurve.cs" />
     <Compile Include="colorimetry\ST2084.cs" />
     <Compile Include="common\Attributes.cs" />
+    <Compile Include="colorimetry\Calibration.cs" />
     <Compile Include="common\Display.cs" />
+    <Compile Include="common\Dithering.cs" />
     <Compile Include="common\EDID.cs" />
     <Compile Include="common\Hotkey.cs" />
+    <Compile Include="common\ReportSettings.cs" />
     <Compile Include="common\Preset.cs" />
     <Compile Include="common\SettingsSourceMap.cs" />
+    <Compile Include="applicators\CalibrationApplicator.cs" />
+    <Compile Include="applicators\MHC2CalibrationApplicator.cs" />
     <Compile Include="icc\ICCProfileGenerator.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />
     <Compile Include="common\Config.cs" />
-    <Compile Include="tools\DisplayColorCapabilities.cs" />
-    <Compile Include="tools\DisplayColorProfileManager.cs" />
+    <Compile Include="tools\dxgi\DisplayColorCapabilities.cs" />
+    <Compile Include="tools\winapi\DisplayColorProfileManager.cs" />
     <Compile Include="tools\EnumExtensions.cs" />
     <Compile Include="tools\GlobalEventsObserver.cs" />
     <Compile Include="tools\ActionScheduler.cs" />
     <Compile Include="ui\AboutWindow.xaml.cs">
       <DependentUpon>AboutWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="tools\DisplayConfigManager.cs" />
+    <Compile Include="tools\winapi\DisplayConfigManager.cs" />
     <Compile Include="colorimetry\LstarEOTF.cs" />
     <Compile Include="colorimetry\Lut16.cs" />
     <Compile Include="colorimetry\DoubleToneCurve.cs" />

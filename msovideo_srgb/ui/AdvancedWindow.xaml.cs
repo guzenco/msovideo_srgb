@@ -26,6 +26,11 @@ namespace msovideo_srgb
             return result == true ? dlg.FileName : null;
         }
 
+        private void Dithering_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _viewModel.OnDitheringChanged();
+        }
+
         private void Browse_Click(object sender, RoutedEventArgs e)
         {
             var profilePath = BrowseProfiles();

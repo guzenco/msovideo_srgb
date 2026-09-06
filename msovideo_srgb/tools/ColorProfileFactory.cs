@@ -5,10 +5,10 @@ namespace msovideo_srgb
 {
     public class ColorProfileFactory
     {
-        private static void AddDesc(ICCProfileGenerator profileGenerator, string profileName)
+        private static void AddDesc(ICCProfileGenerator profileGenerator, string profileName, bool mhc2)
         {
-            profileGenerator.AddTag("desc", ICCProfileGenerator.MakeAsciiTag("MHC2 for " + Path.GetFileNameWithoutExtension(profileName)));
-            profileGenerator.AddTag("cprt", ICCProfileGenerator.MakeAsciiTag("No copyright. Created with msovideo_srgb v" + AboutWindow.Version));
+            profileGenerator.AddTag("desc", ICCProfileGenerator.MakeAsciiTag($"{(mhc2 ? "MHC2" : "ICC")} for {Path.GetFileNameWithoutExtension(profileName)}"));
+            profileGenerator.AddTag("cprt", ICCProfileGenerator.MakeAsciiTag($"No copyright. Created with msovideo_srgb v{AboutWindow.Version}"));
         }
 
         private static void AddMatrix(ICCProfileGenerator profileGenerator, Colorimetry.ColorSpace target)
@@ -24,6 +24,16 @@ namespace msovideo_srgb
             profileGenerator.AddTag("bXYZ", ICCProfileGenerator.MakeXYZTag(matrixXYZ[0, 2], matrixXYZ[1, 2], matrixXYZ[2, 2]));
         }
 
+        private static void AddCurve(ICCProfileGenerator profileGenerator, ToneCurve[] curves, uint resolution)
+        {
+            byte[] tagDataR = ICCProfileGenerator.MakeCurveTag(curves[0], resolution);
+            byte[] tagDataG = ICCProfileGenerator.MakeCurveTag(curves[1], resolution);
+            byte[] tagDataB = ICCProfileGenerator.MakeCurveTag(curves[2], resolution);
+            profileGenerator.AddTag("rTRC", tagDataR);
+            profileGenerator.AddTag("gTRC", tagDataG);
+            profileGenerator.AddTag("bTRC", tagDataB);
+        }
+
         private static void AddCurve(ICCProfileGenerator profileGenerator, ToneCurve curve, uint resolution)
         {
             var tagData = ICCProfileGenerator.MakeCurveTag(curve, resolution);
@@ -32,21 +42,11 @@ namespace msovideo_srgb
             profileGenerator.AddTag("bTRC", tagData);
         }
 
-        private static void AddCurve(ICCProfileGenerator profileGenerator, ICCMatrixProfile profile, Matrix matrixWhite, bool useVsgt, uint resolution)
-        {
-            byte[] tagDataR = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(0, x, useVsgt, matrixWhite), resolution);
-            byte[] tagDataG = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(1, x, useVsgt, matrixWhite), resolution);
-            byte[] tagDataB = ICCProfileGenerator.MakeCurveTag(x => profile.TrcSample(2, x, useVsgt, matrixWhite), resolution);
-            profileGenerator.AddTag("rTRC", tagDataR);
-            profileGenerator.AddTag("gTRC", tagDataG);
-            profileGenerator.AddTag("bTRC", tagDataB);
-        }
-
         private static Matrix OptimizeMatrix(Matrix matrixCSC, Func<int, double, double> sampleAt)
         {
             ToneCurve srgbCurve = new SrgbEOTF();
 
-            Matrix white = Colorimetry.RGBToXYZ(Colorimetry.D65);
+            Matrix white = Colorimetry.XYToXYZ(Colorimetry.D65);
             Matrix white3x3 = Matrix.FromDiagonal(white);
 
             Matrix rgbToXYZ = Colorimetry.RGBToXYZ(Colorimetry.sRGB);
@@ -83,13 +83,58 @@ namespace msovideo_srgb
             return finalMatrixOptimization;
         }
 
+        private static void AddMHC2(ICCProfileGenerator profileGenerator, Calibration calibration, ReportSettings reportSettings)
+        {
+            double peakLuminance = reportSettings.PeakLuminanceOverride ?? calibration.PeakLuminance;
+            double minLuminance = reportSettings.MinLuminanceOverride ?? calibration.MinLuminance;
+
+            if (!reportSettings.IncludeCalibration)
+            {
+                profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(minLuminance, peakLuminance, Matrix.Identity(), new double[][] { new double[] { 0, 1 }, new double[] { 0, 1 }, new double[] { 0, 1 } }));
+                return;
+            }
+
+            Matrix matrix = calibration.MatrixXYZToXYZ;
+            double[][] luts = new double[3][];
+            if (reportSettings.OptimizeMatrix)
+            {
+                Matrix matrixToOpt = reportSettings.OptimizeMatrixAcmMode ? Colorimetry.XYZToXYZ(Colorimetry.sRGB, calibration.NativeColorSpace) : matrix;
+
+                Matrix matrixOptimization = OptimizeMatrix(matrixToOpt, (i, x) => (new ScaledToneCurve(calibration.FinalGamma[i]).SampleAt(x)));
+
+                matrix = matrix * matrixOptimization;
+            }
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (calibration.DeGamma != null)
+                {
+                    luts[i] = new double[reportSettings.CurvesResolution];
+
+                    for (int j = 1; j < reportSettings.CurvesResolution; j++)
+                    {
+                        double value = j / (reportSettings.CurvesResolution - 1.0);
+                        value = calibration.DeGamma[i].SampleAt(value);
+                        value = calibration.ReGamma[i].SampleAt(value);
+                        luts[i][j] = value;
+                    }
+                }
+                else
+                {
+                    luts[i] = new double[] { 0, calibration.ReGamma[i].SampleAt(calibration.RGBGains[i]) };
+                }
+            }
+
+            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(minLuminance, peakLuminance, matrix, luts));
+        }
+
         public static void CreateProfile(string profileName, uint resolution)
         {
             var profileGenerator = new ICCProfileGenerator();
 
-            AddDesc(profileGenerator, profileName);
+            AddDesc(profileGenerator, profileName, true);
 
-            profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.RGBToXYZ(Colorimetry.D65)));
+            profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.XYToXYZ(Colorimetry.D65)));
             AddMatrix(profileGenerator, Colorimetry.sRGB);
 
             ToneCurve gamaCurve = new SrgbEOTF();
@@ -102,199 +147,16 @@ namespace msovideo_srgb
             profileGenerator.SaveAs(profileName);
         }
 
-        public static void CreateProfile(string profileName, uint resolution, EDID edid, double peakLuminance, double maxFullFrameLuminance, double minLuminance)
+        public static ICCProfileGenerator CreateProfile(string profileName, Calibration calibration, ReportSettings reportSettings)
         {
             var profileGenerator = new ICCProfileGenerator();
 
-            AddDesc(profileGenerator, profileName);
+            AddDesc(profileGenerator, profileName, reportSettings.IncludeMHC2);
 
-            Colorimetry.ColorSpace edidColorSpace;
-            double edidGamma;
-            if (edid != null)
-            {
-                edidColorSpace = edid.ColorSpace;
-                edidGamma = edid.Gamma;
+            profileGenerator.SetManufacturerID(reportSettings.ManufacturerId);
+            profileGenerator.SetDeviceModel(reportSettings.ProductCodeId);
 
-                edidColorSpace.White = Colorimetry.D65;
-
-                profileGenerator.SetManufacturerID(edid.ManufacturerId);
-                profileGenerator.SetDeviceModel(edid.ProductCodeId);
-            }
-            else
-            {
-                edidColorSpace = Colorimetry.sRGB;
-                edidGamma = 2.2;
-            }
-
-            profileGenerator.SetManufacturerID(edid.ManufacturerId);
-            profileGenerator.SetDeviceModel(edid.ProductCodeId);
-
-            Matrix chromaticAdaptation = Colorimetry.WhiteToWhiteAdaptation(Colorimetry.RGBToXYZ(Colorimetry.D65), Colorimetry.D50);
-            profileGenerator.AddTag("chad", ICCProfileGenerator.MakeMatrixTag(chromaticAdaptation));
-
-            profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(Colorimetry.D50));
-            AddMatrix(profileGenerator, edidColorSpace);
-
-            ToneCurve gamaCurve = new GammaToneCurve(edidGamma);
-            AddCurve(profileGenerator, gamaCurve, resolution);
-
-            profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(maxFullFrameLuminance));
-
-            double[][] luts = new double[][] {
-                    new double[] { 0, 1 },
-                    new double[] { 0, 1 },
-                    new double[] { 0, 1 }
-                };
-
-            Matrix matrix = Matrix.Identity();
-
-            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(minLuminance, peakLuminance, matrix, luts));
-
-            profileGenerator.SaveAs(profileName);
-        }
-
-        public static void CreateProfile(string profileName, uint resolution, EDID edid, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, 
-            bool reportWhiteD65 = false, 
-            bool reportColorSpaceSRGB = false, 
-            bool reportGammaSRGB = false,
-            double? peakLuminanceOverride = null,
-            double? maxFullFrameLuminanceOverride = null,
-            double? minLuminanceOverride = null)
-        {
-            var profileGenerator = new ICCProfileGenerator();
-
-            AddDesc(profileGenerator, profileName);
-
-            Colorimetry.ColorSpace edidColorSpace;
-            Colorimetry.Point edidWhite;
-            double edidGamma;
-            if (edid != null)
-            {
-                edidColorSpace = edid.ColorSpace;
-                edidWhite = edidColorSpace.White;
-                edidGamma = edid.Gamma;
-
-                edidColorSpace.White = Colorimetry.D65;
-
-                profileGenerator.SetManufacturerID(edid.ManufacturerId);
-                profileGenerator.SetDeviceModel(edid.ProductCodeId);
-            }
-            else
-            {
-                edidColorSpace = Colorimetry.sRGB;
-                edidWhite = Colorimetry.D65;
-                edidGamma = 2.2;
-            }
-
-            Matrix targetWhite;
-            Matrix matrixWhite = Matrix.Identity();
-            if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
-            {
-                targetWhite = Colorimetry.RGBToXYZ(edidWhite);
-            }
-            else
-            {
-                targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
-                matrixWhite = Colorimetry.CreateWhiteMatrix(Colorimetry.RGBToXYZ(edidColorSpace), Colorimetry.RGBToXYZ(edidWhite), targetWhite);
-            }
-
-            Matrix reportedWhite = reportWhiteD65 ? Colorimetry.RGBToXYZ(Colorimetry.D65) : targetWhite;
-
-            Matrix chromaticAdaptation = Colorimetry.WhiteToWhiteAdaptation(reportedWhite, Colorimetry.D50);
-            profileGenerator.AddTag("chad", ICCProfileGenerator.MakeMatrixTag(chromaticAdaptation));
-            reportedWhite = Colorimetry.D50;
-
-            profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(reportedWhite));
-
-            Colorimetry.ColorSpace finalColorSpace; 
-            Matrix matrixCsc = Matrix.Identity();
-            if (targetColorSpace.Equals(Colorimetry.Native))
-            {
-                finalColorSpace = edidColorSpace;
-            }
-            else
-            {
-                finalColorSpace = targetColorSpace;  
-                matrixCsc = Colorimetry.CreateMatrix(edidColorSpace, targetColorSpace);
-            }
-
-            Colorimetry.ColorSpace reportedColorSpace = reportColorSpaceSRGB ? Colorimetry.sRGB : finalColorSpace;
-            AddMatrix(profileGenerator, reportedColorSpace);
-
-            ToneCurve gamaCurve = new GammaToneCurve(edidGamma);
-            ToneCurve reportedCurve = reportGammaSRGB ? new SrgbEOTF() : gamaCurve;
-            AddCurve(profileGenerator, reportedCurve, resolution);
-
-            double[][] luts = new double[][] {
-                    new double[] { 0, gamaCurve.SampleInverseAt(matrixWhite[0, 0]) },
-                    new double[] { 0, gamaCurve.SampleInverseAt(matrixWhite[1, 1]) },
-                    new double[] { 0, gamaCurve.SampleInverseAt(matrixWhite[2, 2]) }
-                };
-
-            Matrix matrix = matrixCsc;
-
-            double peakLuminance = peakLuminanceOverride ?? 80;
-            double maxFullFrameLuminance = maxFullFrameLuminanceOverride ?? 80;
-            double minLuminance = minLuminanceOverride ?? 0;
-
-            profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(maxFullFrameLuminance));
-
-            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(minLuminance, peakLuminance, matrix, luts));
-
-            profileGenerator.SaveAs(profileName);
-        }
-
-        public static void CreateProfile(string profileName, uint resolution, EDID edid, ICCMatrixProfile profile, Colorimetry.ColorSpace targetColorSpace, Colorimetry.Point targetWhitePoint, double luminance, 
-            bool reportWhiteD65 = false,
-            bool reportColorSpaceSRGB = false,
-            bool reportGammaSRGB = false, 
-            bool useVcgt = false, 
-            bool optimizeMatrix = false, 
-            bool acmMode = false, 
-            ToneCurve gamma = null, 
-            ToneCurve curve = null,
-            double? peakLuminanceOverride = null,
-            double? maxFullFrameLuminanceOverride = null,
-            double? minLuminanceOverride = null)
-        {
-            var profileGenerator = new ICCProfileGenerator();
-
-            AddDesc(profileGenerator, profileName);
-
-            if (edid != null)
-            {
-                profileGenerator.SetManufacturerID(edid.ManufacturerId);
-                profileGenerator.SetDeviceModel(edid.ProductCodeId);
-            }
-
-            Matrix targetWhite;
-            Matrix matrixWhite = Matrix.Identity();
-            if (targetWhitePoint.Equals(Colorimetry.NativeWhite))
-            {
-                if (gamma == null && !useVcgt && profile.vcgt != null)
-                {
-                    Matrix profileMatrixWhite = Matrix.FromDiagonal(new double[] {
-                        profile.TrcSample(0, profile.vcgt[0].SampleAt(1), true, Matrix.Identity()),
-                        profile.TrcSample(1, profile.vcgt[1].SampleAt(1), true, Matrix.Identity()),
-                        profile.TrcSample(2, profile.vcgt[2].SampleAt(1), true, Matrix.Identity())
-                    });
-                    targetWhite = Colorimetry.XYZScale(profile.matrix * Colorimetry.WhiteToWhiteAdaptation(Colorimetry.D50, profile.whitePoint), profile.whitePoint) * profileMatrixWhite.Inverse() * Matrix.One3x1();
-                }
-                else
-                {
-                    targetWhite = profile.whitePoint;
-                }
-            }
-            else
-            {
-                targetWhite = Colorimetry.RGBToXYZ(targetWhitePoint);
-                matrixWhite = Colorimetry.CreateWhiteMatrix(profile.matrix, profile.whitePoint, targetWhite);
-            }
-
-            double currentLuminance = profile.Luminance(matrixWhite, gamma);
-            matrixWhite *= Math.Min(luminance, currentLuminance) / currentLuminance;
-
-            Matrix reportWhite = reportWhiteD65 ? Colorimetry.RGBToXYZ(Colorimetry.D65) : targetWhite;
+            Matrix reportWhite = reportSettings.ReportWhiteD65 ? Colorimetry.XYToXYZ(Colorimetry.D65) : calibration.TargetWhite;
 
             Matrix chromaticAdaptation = Colorimetry.WhiteToWhiteAdaptation(reportWhite, Colorimetry.D50);
             profileGenerator.AddTag("chad", ICCProfileGenerator.MakeMatrixTag(chromaticAdaptation));
@@ -302,103 +164,35 @@ namespace msovideo_srgb
 
             profileGenerator.AddTag("wtpt", ICCProfileGenerator.MakeXYZTag(reportWhite));
 
-            Matrix finalColorSpace;
-            Matrix matrixCSC = Matrix.Identity();
-            if (targetColorSpace.Equals(Colorimetry.Native))
-            {
-                finalColorSpace = profile.matrix;
-            }
-            else
-            {
-                finalColorSpace = Colorimetry.RGBToPCSXYZ(targetColorSpace);
-                matrixCSC = Colorimetry.CreateMatrix(profile.matrix, targetColorSpace);
-            }
-
-            if (optimizeMatrix)
-            {
-                Matrix matrixOptimization;
-                Matrix matrixToOpt = acmMode ? Colorimetry.CreateMatrix(profile.matrix, Colorimetry.sRGB) : matrixCSC;
-
-                if (gamma != null)
-                {
-                    ToneCurve scaledGamma = new ScaledToneCurve(gamma);
-                    matrixOptimization = OptimizeMatrix(matrixToOpt, (i, x) => scaledGamma.SampleAt(x));
-                }
-                else
-                {
-                    matrixOptimization = OptimizeMatrix(matrixToOpt, (i, x) => (new ScaledToneCurve(sampleAt: (v) => profile.TrcSample(i, v, !useVcgt, matrixWhite)).SampleAt(x)));
-                }
-
-                matrixCSC = matrixCSC * matrixOptimization;
-            }
-
-            Matrix reportedColorSpace = reportColorSpaceSRGB ? Colorimetry.RGBToPCSXYZ(Colorimetry.sRGB) : finalColorSpace;
+            Matrix reportedColorSpace = reportSettings.ReportColorSpaceSRGB ? Colorimetry.RGBToPCSXYZ(Colorimetry.sRGB) : calibration.TargetColorSpacePCS;
             AddMatrix(profileGenerator, reportedColorSpace);
 
-            ToneCurve reportedCurve = curve != null ? curve : gamma;
-            reportedCurve = reportGammaSRGB ? new SrgbEOTF() : reportedCurve;
-            if (reportedCurve != null)
+
+            if (reportSettings.CurveOverride != null)
             {
-                AddCurve(profileGenerator, reportedCurve, resolution);
+                AddCurve(profileGenerator, reportSettings.CurveOverride, reportSettings.CurvesResolution);
+            }
+            else if (reportSettings.ReportGammaSRGB)
+            {
+                AddCurve(profileGenerator, new SrgbEOTF(), reportSettings.CurvesResolution);
             }
             else
             {
-                AddCurve(profileGenerator, profile, matrixWhite, !useVcgt, resolution);
+                AddCurve(profileGenerator, calibration.FinalGamma, reportSettings.CurvesResolution);
             }
 
-            double[][] luts;
-
-            if (gamma != null || (useVcgt && profile.vcgt != null))
-            {
-                luts = new double[3][];
-
-
-                for (int i = 0; i < 3; i++)
-                {
-                    luts[i] = new double[resolution];
-
-                    ScaledToneCurve scaledGamma;
-                    if (gamma != null)
-                    {
-                        scaledGamma = new ScaledToneCurve(gamma, profile.trcBlack, matrixWhite[i, i]);
-                    }
-                    else
-                    {
-                        scaledGamma = new ScaledToneCurve(isAbsolute: true, sampleAt: (x) => profile.TrcSample(i, x, !useVcgt, matrixWhite), white: matrixWhite[i, i]);
-                    }
-
-                    for (int j = 1; j < resolution; j++)
-                    {
-                        double value = j / (resolution - 1.0);
-
-                        value = scaledGamma.SampleAt(value);
-
-                        value = profile.TrcSampleInverse(i, value);
-
-                        luts[i][j] = value;
-                    }
-                }
-            }
-            else
-            {
-                luts = new double[][] {
-                    new double[] { 0, profile.TrcSampleInverse(0, matrixWhite[0, 0]) },
-                    new double[] { 0, profile.TrcSampleInverse(1, matrixWhite[1, 1]) },
-                    new double[] { 0, profile.TrcSampleInverse(2, matrixWhite[2, 2]) }
-                };
-            }
-
-            double peakLuminance = peakLuminanceOverride ?? luminance;
-            double maxFullFrameLuminance = maxFullFrameLuminanceOverride ?? luminance;
-            double minLuminance = minLuminanceOverride ?? profile.tagBlack * profile.luminance;
-
-            Matrix matrix = matrixCSC;
+            double maxFullFrameLuminance = reportSettings.MaxFullFrameLuminanceOverride ?? calibration.MaxFullFrameLuminance;
 
             profileGenerator.AddTag("lumi", ICCProfileGenerator.MakeLuminanceTag(maxFullFrameLuminance));
 
-            profileGenerator.AddTag("MHC2", ICCProfileGenerator.MakeMHC2(minLuminance, peakLuminance, matrix, luts));
+            if (reportSettings.IncludeMHC2)
+            {
+                AddMHC2(profileGenerator, calibration, reportSettings);
+            }
 
             profileGenerator.SaveAs(profileName);
+
+            return profileGenerator;
         }
     }
 }

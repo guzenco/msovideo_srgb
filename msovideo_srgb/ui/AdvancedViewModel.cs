@@ -14,6 +14,9 @@ namespace msovideo_srgb
 
         private MonitorData _monitor;
 
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.Applicator))]
+        private int _applicator;
+
         [BindToProperty(typeof(MonitorData), nameof(MonitorData.Target))]
         private int _target;
 
@@ -58,6 +61,9 @@ namespace msovideo_srgb
 
         [BindToProperty(typeof(MonitorData), nameof(MonitorData.CustomWhiteY))]
         private double _customWhiteY;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.CreateProfile))]
+        private bool _createProfile;
 
         [BindToProperty(typeof(MonitorData), nameof(MonitorData.ReportWhiteD65))]
         private bool _reportWhiteD65;
@@ -107,6 +113,18 @@ namespace msovideo_srgb
         [BindToProperty(typeof(MonitorData), nameof(MonitorData.MinLuminanceHDR))]
         private double _minLuminanceHDR;
 
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.DitheringApplicator))]
+        private int _ditheringApplicator;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.DitheringState))]
+        private int _ditheringState;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.DitheringBits))]
+        private int _ditheringBits;
+
+        [BindToProperty(typeof(MonitorData), nameof(MonitorData.DitheringMode))]
+        private int _ditheringMode;
+
         public AdvancedViewModel()
         {
             throw new NotSupportedException();
@@ -121,7 +139,7 @@ namespace msovideo_srgb
                 var bindTo = prop.GetCustomAttribute<BindToPropertyAttribute>();
 
                 if (bindTo != null)
-                {                    
+                {
                     var val = bindTo.Property.GetValue(monitor);
                     prop.SetValue(this, val);
                 }
@@ -148,7 +166,91 @@ namespace msovideo_srgb
             }
         }
 
+        public CalibrationApplicator[] Applicators => _monitor.Applicators;
+        public CalibrationApplicator ActiveApplicator => Applicator >= 0 && Applicator < Applicators.Length ? Applicators[Applicator] : null;
+
+        public int Applicator
+        {
+            set
+            {
+                if (value == _applicator) return;
+                _applicator = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Warnings));
+                OnPropertyChanged(nameof(ActiveApplicator));
+                OnPropertyChanged(nameof(ApplicatorAvailable));
+                OnPropertyChanged(nameof(ProfileOptional));
+                OnPropertyChanged(nameof(ProfileIncludeMHC2));
+                OnPropertyChanged(nameof(ReportSettingsAvailable));
+                OnPropertyChanged(nameof(SupportCurveResolution));
+                OnPropertyChanged(nameof(SupportMatrixOptimization));
+                OnPropertyChanged(nameof(SupportHDR));
+
+                if (value == _ditheringApplicator && ActiveApplicator?.RequiresDitheringRestore == true)
+                {
+                    ActiveApplicator.Dithering = new Dithering(_ditheringState, _ditheringBits, _ditheringMode);
+                }
+
+                OnDitheringChanged();
+            }
+            get => _applicator;
+        }
+
+        public Visibility ApplicatorAvailable => ActiveApplicator != null ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility ProfileOptional => ActiveApplicator?.ProfileOptional == true ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility ProfileIncludeMHC2 => ActiveApplicator?.ProfileIncludeMHC2 == true ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility SupportCurveResolution => ActiveApplicator?.SupportCurveResolution == true ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility SupportMatrixOptimization => ActiveApplicator?.SupportMatrixOptimization == true ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility SupportHDR => ActiveApplicator?.SupportHDR == true ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility SupportDithering => ActiveApplicator?.SupportDithering == true && Dithering != null ? Visibility.Visible : Visibility.Collapsed;
+
         public EDID Edid => _monitor.Edid;
+
+        private bool _ditheringUiResetting;
+        private Dithering _dithering;
+        public Dithering Dithering
+        {
+            get
+            {
+                if (_ditheringUiResetting) return null;
+
+                if (_dithering == null)
+                {
+                    _dithering = ActiveApplicator?.Dithering;
+                }
+
+                return _dithering;
+            }
+        }
+
+        private bool _ditheringUpdating;
+        public void OnDitheringChanged()
+        {
+            if (_ditheringUpdating) return;
+            _ditheringUpdating = true;
+
+            if (_dithering != null)
+            {
+                ActiveApplicator.Dithering = _dithering;
+                _dithering = null;
+
+                if (ActiveApplicator?.RequiresDitheringRestore == true && Dithering != null)
+                {
+                    _ditheringApplicator = Applicator;
+                    _ditheringState = Dithering.State;
+                    _ditheringBits = Dithering.Bits;
+                    _ditheringMode = Dithering.Mode;
+                }
+            }
+
+            OnPropertyChanged(nameof(SupportDithering));
+            _ditheringUiResetting = true;
+            OnPropertyChanged(nameof(Dithering));
+            _ditheringUiResetting = false;
+            OnPropertyChanged(nameof(Dithering));
+
+            _ditheringUpdating = false;
+        }
 
         public bool UseEdid
         {
@@ -158,7 +260,7 @@ namespace msovideo_srgb
                 _useIcc = !value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(UseIcc));
-                OnPropertyChanged(nameof(ProfilePathSDRWarning));
+                OnPropertyChanged(nameof(Warnings));
             }
             get => !_useIcc;
         }
@@ -171,7 +273,7 @@ namespace msovideo_srgb
                 _useIcc = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(UseEdid));
-                OnPropertyChanged(nameof(ProfilePathSDRWarning));
+                OnPropertyChanged(nameof(Warnings));
             }
             get => _useIcc;
         }
@@ -184,7 +286,7 @@ namespace msovideo_srgb
                 _profilePath = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ProfileName));
-                OnPropertyChanged(nameof(ProfilePathSDRWarning));
+                OnPropertyChanged(nameof(Warnings));
             }
             get => _profilePath;
         }
@@ -311,6 +413,20 @@ namespace msovideo_srgb
             get => _customWhiteY;
         }
 
+        public bool CreateProfile
+        {
+            set
+            {
+                if (value == _createProfile) return;
+                _createProfile = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ReportSettingsAvailable));
+            }
+            get => _createProfile;
+        }
+
+        public Visibility ReportSettingsAvailable => ProfileOptional == Visibility.Collapsed || CreateProfile ? Visibility.Visible : Visibility.Collapsed;
+
         public bool ReportWhiteD65
         {
             set
@@ -384,7 +500,7 @@ namespace msovideo_srgb
                 if (value == _useIccHDR) return;
                 _useIccHDR = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(ProfilePathHDRWarning));
+                OnPropertyChanged(nameof(Warnings));
             }
             get => _useIccHDR;
         }
@@ -397,7 +513,7 @@ namespace msovideo_srgb
                 _profilePathHDR = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ProfileNameHDR));
-                OnPropertyChanged(nameof(ProfilePathHDRWarning));
+                OnPropertyChanged(nameof(Warnings));
             }
             get => _profilePathHDR;
         }
@@ -517,36 +633,6 @@ namespace msovideo_srgb
             get => _minLuminanceHDR;
         }
 
-        public Visibility MHC2SupportUnknownWarning =>
-            _monitor.IsSupportMHC2 == null
-            ? Visibility.Visible : Visibility.Collapsed;
-
-        public Visibility MHC2NotSupportedWarning => 
-            _monitor.IsSupportMHC2 == false 
-            ? Visibility.Visible : Visibility.Collapsed;
-
-        public Visibility DuplicateDesktopWarning =>
-            MHC2NotSupportedWarning != Visibility.Visible &&
-            !_monitor.IsUnique 
-            ? Visibility.Visible : Visibility.Collapsed;
-
-        public Visibility AcmWarning =>
-            MHC2NotSupportedWarning != Visibility.Visible &&
-            _monitor.AcmActive 
-            ? Visibility.Visible : Visibility.Collapsed;
-
-        public Visibility ProfilePathSDRWarning =>
-            MHC2NotSupportedWarning != Visibility.Visible &&
-            DuplicateDesktopWarning != Visibility.Visible &&
-            UseIcc && ProfilePath.Equals("")
-            ? Visibility.Visible : Visibility.Collapsed;
-
-        public Visibility ProfilePathHDRWarning =>
-            MHC2NotSupportedWarning != Visibility.Visible &&
-            DuplicateDesktopWarning != Visibility.Visible &&
-            UseIccHDR && ProfilePathHDR.Equals("")
-            ? Visibility.Visible : Visibility.Collapsed;
-
         public double CustomPercentage
         {
             set
@@ -557,6 +643,40 @@ namespace msovideo_srgb
             }
             get => _customPercentage;
         }
+
+
+        public string Warnings
+        {
+            get
+            {
+                List<string> warnings = new List<string>();
+
+                if (ActiveApplicator == null)
+                {
+                    warnings.Add("Selected calibration applicator unavailable");
+                }
+                else
+                {
+                    warnings.AddRange(ActiveApplicator.Warnings);
+
+                    if (UseIcc && ProfilePath.Equals(""))
+                    {
+                        warnings.Add("Profile path required – cannot clamp SDR");
+                    }
+                    if (ActiveApplicator.SupportHDR && UseIccHDR && ProfilePathHDR.Equals(""))
+                    {
+                        warnings.Add("Profile path required – cannot clamp HDR");
+                    }
+                }
+
+                WarningsVisibility = warnings.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                OnPropertyChanged(nameof(WarningsVisibility));
+
+                return string.Join("\n", warnings);
+            }
+        }
+
+        public Visibility WarningsVisibility { get; set; }
 
         public List<string> ChangedProperties { get; } = new List<string>();
 

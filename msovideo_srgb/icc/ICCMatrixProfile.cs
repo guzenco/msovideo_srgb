@@ -61,11 +61,11 @@ namespace msovideo_srgb
             return value;
         }
 
-        public double TrcSample(int i, double x, bool useVsgt, Matrix matrixWhite)
+        public double TrcSample(int i, double x, bool useVsgt, Matrix rgbGains)
         {
             double black = TrcSample(i, 0, useVsgt);
 
-            double white_x = TrcSampleInverse(i, matrixWhite[i, i]);
+            double white_x = TrcSampleInverse(i, rgbGains[i]);
             double white = TrcSample(i, white_x, useVsgt);
             
             double sample = TrcSample(i, x * white_x, useVsgt);
@@ -73,7 +73,7 @@ namespace msovideo_srgb
             return black + (sample - black) * (1 - black) / (white - black);
         }
 
-        public double Luminance(Matrix matrix, ToneCurve gamma = null)
+        public double Luminance(Matrix rgbGains, ToneCurve gamma = null)
         {
             Matrix scale = Matrix.One3x1();
             if (gamma != null)
@@ -81,7 +81,7 @@ namespace msovideo_srgb
                 gamma = new ScaledToneCurve(gamma, black: trcBlack);
                 scale *= gamma.SampleAt(1);
             }
-            return luminance * (this.matrix * matrix * scale)[1];
+            return luminance * (matrix * Matrix.FromDiagonal(rgbGains) * scale)[1];
         }
 
         private ICCMatrixProfile()

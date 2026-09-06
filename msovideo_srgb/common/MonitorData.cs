@@ -2,16 +2,21 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using System.Windows;
 
 namespace msovideo_srgb
 {
     public class MonitorData : INotifyPropertyChanged
     {
+        public static readonly Func<Display, CalibrationApplicator>[] ApplicatorFactories = new Func<Display, CalibrationApplicator>[]
+        {
+            MHC2CalibrationApplicator.Init,
+        };
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private bool? _clamped;
+        private int _applicator;
 
         private MainViewModel _viewModel;
 
@@ -20,184 +25,80 @@ namespace msovideo_srgb
             _clamped = false;
             _viewModel = viewModel;
 
-            Number = number;        
+            Number = number;
             Display = display;
 
             Edid = Display.GetEDID();
 
-            if (Display.HaveFriendlyDeviceName)
-            {
-                MHCProfileName =  $"{Display.FriendlyDeviceName} {Display.DeviceID}#{Display.InstanceID}";
-            }
-            else
-            {
-                MHCProfileName = $"{Display.DeviceID}#{Display.InstanceID}";
-            }
+            Applicators = ApplicatorFactories.Select(init => init(Display)).Where(a => a != null).ToArray();
 
-            MHCProfileName = new string(MHCProfileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
-
-            IsSupportMHC2 = DisplayColorProfileManager.IsSupportMHC2(Display);
+            ICCProfileNameSDR = DisplayColorProfileManager.GetManagedProfileName(Display, false);
         }
 
         public int Number { get; }
         public EDID Edid { get; }
         public Display Display { get; }
-        public bool? IsSupportMHC2 { get; }
-        public string MHCProfileName { get; }
-        public string MHCProfileNameSDR => "[SDR] " + MHCProfileName + ".icm";
-        public string MHCProfileNameHDR => "[HDR] " + MHCProfileName + ".icm";
-
-        public const string MHCProfileNameReset = "msovideo_srgb_no_transform.icm";
-
-        public const string MHCProfileNamePattern = @"^\[(?:SDR|HDR)\]\s.+#[^\s]+(?:\.icm| default\.icm)$";
-        
-        public void ScheduleCreateProfile(Action createProfile)
-        {
-            ActionScheduler.Add(Path, createProfile, HandleClampException);
-        }
-
-        private void ScheduleApplyProfile(string profileName, bool hdr)
-        {
-            ActionScheduler.Add(Path, () => ApplyProfile(profileName, hdr), HandleClampException);
-        }
-
-        private bool IsManagedProfileActive(bool hdr)
-        {
-            string profileName = DisplayColorProfileManager.GetProfile(Display, hdr);
-            if (Regex.IsMatch(profileName, MHCProfileNamePattern) && ICCProfileGenerator.IsGeneratedByThis(profileName))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        private void ApplyProfile(string profileName, bool hdr)
-        {
-            ColorProfileFactory.CreateProfile(MHCProfileNameReset, CurveResolution);
-
-            DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameReset, hdr);
-            DisplayColorProfileManager.SetProfile(Display, MHCProfileNameReset, hdr);
-
-            DisplayColorProfileManager.AddAssociation(Display, profileName, hdr);
-            DisplayColorProfileManager.SetProfile(Display, profileName, hdr);
-
-            DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameReset, hdr);
-        }
-
-        private void UnapplyProfile(string profileName, bool hdr, bool force = true)
-        {
-            if (DisplayColorProfileManager.GetProfile(Display, hdr).Equals(profileName))
-            {
-                if (force)
-                {
-                    ColorProfileFactory.CreateProfile(MHCProfileNameReset, CurveResolution);
-
-                    DisplayColorProfileManager.AddAssociation(Display, MHCProfileNameReset, hdr);
-                    DisplayColorProfileManager.SetProfile(Display, MHCProfileNameReset, hdr);
-
-                    DisplayColorProfileManager.RemoveAssociation(Display, profileName, hdr);
-
-                    DisplayColorProfileManager.RemoveAssociation(Display, MHCProfileNameReset, hdr);
-                }
-                else
-                {
-                    DisplayColorProfileManager.RemoveAssociation(Display, profileName, hdr);
-                }
-            }
-        }
-
-        private void ScheduleRemoveWrongProfileAssociations()
-        {
-            ActionScheduler.Add(Path, () => RemoveWrongProfileAssociations(), HandleClampException);
-        }
-
-        private void RemoveWrongProfileAssociations()
-        {
-            var profiles = DisplayColorProfileManager.GetAllProfiles()?.ToList();
-            if (profiles == null) return;
-
-            string profileNameSDR = DisplayColorProfileManager.GetProfile(Display, false);
-            if (profiles.Contains(profileNameSDR))
-            {
-                profiles.Remove(profileNameSDR);
-            }
-            else
-            {
-                profileNameSDR = "";
-            }
-
-            string profileNameHDR = DisplayColorProfileManager.GetProfile(Display, true);
-            if (profiles.Contains(profileNameHDR))
-            {
-                profiles.Remove(profileNameHDR);
-            }
-            else
-            {
-                profileNameHDR = "";
-            }
-
-            foreach (string profileName in profiles)
-            {
-                if (!Regex.IsMatch(profileName, MHCProfileNamePattern)) continue;
-                if (!ICCProfileGenerator.IsGeneratedByThis(profileName)) continue;
-
-                DisplayColorProfileManager.RemoveAssociation(Display, profileName, false);
-                DisplayColorProfileManager.RemoveAssociation(Display, profileName, true);
-            }
-
-            if (profileNameSDR != MHCProfileNameSDR && Regex.IsMatch(profileNameSDR, MHCProfileNamePattern) && ICCProfileGenerator.IsGeneratedByThis(profileNameSDR))
-            {
-                UnapplyProfile(profileNameSDR, false);
-            }
-
-            if (profileNameHDR != MHCProfileNameHDR && Regex.IsMatch(profileNameHDR, MHCProfileNamePattern) && ICCProfileGenerator.IsGeneratedByThis(profileNameHDR))
-            {
-                UnapplyProfile(profileNameHDR, true);
-            }
-        }
-
-        private void ScheduleUnapplyProfile(bool doClamp)
-        {
-            ActionScheduler.Add(Path, () => UnapplyProfiles(doClamp), HandleClampException);
-        }
-
-        private void UnapplyProfiles(bool doClamp)
-        {
-
-            if (!doClamp || !CanClampSDR || !(UseEdid || UseIcc))
-            {
-                UnapplyProfile(MHCProfileNameSDR, false);
-            }
-            if (!doClamp || !CanClampHDR || !(UseIccHDR || OverrideMetadataHDR))
-            {
-                UnapplyProfile(MHCProfileNameHDR, true);
-            }
-        }
+        public CalibrationApplicator[] Applicators { get; }
+        public string ICCProfileNameSDR { get; }
 
         private void UpdateClamp(bool doClamp)
         {
             ActionScheduler.Clear(Path);
             ActionScheduler.SetPriority(Path, -Number);
 
-            var scope = DisplayColorProfileManager.GetDisplayUserScope(Display);
-
-            if (scope == DisplayColorProfileManager.WcsProfileManagementScope.SystemWide)
+            if (DitheringApplicator >= 0 && DitheringApplicator < Applicators.Length && Applicators[DitheringApplicator].RequiresDitheringRestore)
             {
-                DisplayColorProfileManager.SetDisplayUserScope(Display, DisplayColorProfileManager.WcsProfileManagementScope.CurrentUser);
+                Dithering dithering = new Dithering(DitheringState, DitheringBits, DitheringMode);
+                ActionScheduler.Add(Path, () => Applicators[DitheringApplicator].Dithering = dithering);
             }
 
-            ScheduleRemoveWrongProfileAssociations();
-            ScheduleUnapplyProfile(doClamp);
+            foreach (var applicator in Applicators)
+            {
+                if (applicator == ActiveApplicator) continue;
+
+                ActionScheduler.Add(Path, applicator.Prepare);
+                ActionScheduler.Add(Path, applicator.UnapplySDR);
+                if (applicator.SupportHDR)
+                {
+                    ActionScheduler.Add(Path, applicator.UnapplyHDR);
+                }
+            }
+
+            if (ActiveApplicator == null) return;
+
+            ActionScheduler.Add(Path, ActiveApplicator.Prepare, HandleClampException);
+
+            if (!doClamp || !CanClampSDR || !(UseEdid || UseIcc))
+            {
+                ActionScheduler.Add(Path, ActiveApplicator.UnapplySDR, HandleClampException);
+            }
+            if (ActiveApplicator.SupportHDR && (!doClamp || !CanClampHDR || !(UseIccHDR || OverrideMetadataHDR)))
+            {
+                ActionScheduler.Add(Path, ActiveApplicator.UnapplyHDR, HandleClampException);
+            }
+            if (!ActiveApplicator.HandleProfile)
+            {
+                ActionScheduler.Add(Path, () => DisplayColorProfileManager.UnapplyProfile(Display, ICCProfileNameSDR, hdr: false, force: false));
+            }
 
             if (!doClamp || !CanClamp) return;
 
             if (CanClampSDR)
             {
-                Action createProfile = null;
+                Calibration calibration = null;
+                ReportSettings reportSettings = new ReportSettings();
 
-                double? PeakLuminance = null;
-                double? MaxFullFrameLuminance = null;
-                double? MinLuminance = null;
+                if (Edid != null)
+                {
+                    reportSettings.ManufacturerId = Edid.ManufacturerId;
+                    reportSettings.ProductCodeId = Edid.ProductCodeId;
+                }
+
+                reportSettings.IncludeMHC2 = ActiveApplicator.ProfileIncludeMHC2;
+                reportSettings.CurvesResolution = ActiveApplicator.SupportCurveResolution ? CurveResolution : 256;
+                reportSettings.ReportWhiteD65 = ReportWhiteD65 || AcmActive;
+                reportSettings.ReportColorSpaceSRGB = ReportColorSpaceSRGB && !AcmActive;
+                reportSettings.ReportGammaSRGB = ReportGammaSRGB && !AcmActive;
 
                 if (ExcludeHdrMetadata)
                 {
@@ -206,42 +107,33 @@ namespace msovideo_srgb
                         var colorCapabilities = DisplayColorCapabilities.GetColorCapabilities(Display);
                         if (colorCapabilities != null)
                         {
-                            PeakLuminance = colorCapabilities?.PeakLuminance;
-                            MaxFullFrameLuminance = colorCapabilities?.MaxFullFrameLuminance;
-                            MinLuminance = colorCapabilities?.MinLuminance;
+                            reportSettings.PeakLuminanceOverride = colorCapabilities?.PeakLuminance;
+                            reportSettings.MaxFullFrameLuminanceOverride = colorCapabilities?.MaxFullFrameLuminance;
+                            reportSettings.MinLuminanceOverride = colorCapabilities?.MinLuminance;
                         }
                     }
                     else
                     {
-                        PeakLuminance = -1;
-                        MinLuminance = -1;
+                        reportSettings.PeakLuminanceOverride = -1;
+                        reportSettings.MinLuminanceOverride = -1;
                     }
                 }
 
                 if (UseEdid)
                 {
-                    createProfile = () =>
-                    {
-                        ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, TargetColorSpace, TargetWhitePoint,
-                                reportWhiteD65: ReportWhiteD65 || AcmActive,
-                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !AcmActive,
-                                reportGammaSRGB: ReportGammaSRGB && !AcmActive,
-                                peakLuminanceOverride: PeakLuminance,
-                                maxFullFrameLuminanceOverride: MaxFullFrameLuminance,
-                                minLuminanceOverride: MinLuminance);
-                    };
+                    calibration = new Calibration(Edid, TargetColorSpace, TargetWhitePoint);
                 }
                 else if (UseIcc)
                 {
                     var profile = ICCMatrixProfile.FromFile(ProfilePath);
 
-                    Matrix matrixWhite = Matrix.Identity();
+                    Matrix rgbGains = Matrix.One3x1();
                     if (!TargetWhitePoint.Equals(Colorimetry.NativeWhite))
                     {
-                        matrixWhite = Colorimetry.CreateWhiteMatrix(profile.matrix, profile.whitePoint, TargetWhitePoint);
+                        rgbGains = Colorimetry.RGBGainsForWhite(profile.matrix, profile.whitePoint, TargetWhitePoint);
                     }
 
-                    double luminance = profile.Luminance(matrixWhite);
+                    double luminance = profile.Luminance(rgbGains);
                     if (LimitLuminance)
                     {
                         luminance = Math.Min(luminance, MaxLuminance);
@@ -276,77 +168,95 @@ namespace msovideo_srgb
                         }
                     }
 
-                    createProfile =() =>
+                    if (ActiveApplicator.SupportMatrixOptimization && OptimizeMatrix)
                     {
-                        ColorProfileFactory.CreateProfile(MHCProfileNameSDR, CurveResolution, Edid, profile, TargetColorSpace, TargetWhitePoint, luminance,
-                                reportWhiteD65: ReportWhiteD65 || AcmActive,
-                                reportColorSpaceSRGB: ReportColorSpaceSRGB && !AcmActive,
-                                reportGammaSRGB: ReportGammaSRGB && !AcmActive,
-                                useVcgt: UseVcgt,
-                                optimizeMatrix: OptimizeMatrix,
-                                acmMode: AcmActive,
-                                gamma: gamma,
-                                peakLuminanceOverride: PeakLuminance,
-                                maxFullFrameLuminanceOverride: MaxFullFrameLuminance,
-                                minLuminanceOverride: MinLuminance);
-                    };
+                        reportSettings.OptimizeMatrix = true;
+                        reportSettings.OptimizeMatrixAcmMode = AcmActive;
+                    }
+
+                    calibration = new Calibration(profile, TargetColorSpace, TargetWhitePoint, luminance, UseVcgt, gamma);
                 }
 
-                if (createProfile != null)
+                if (calibration != null)
                 {
-                    ScheduleCreateProfile(createProfile);
-                    ScheduleApplyProfile(MHCProfileNameSDR, false);
+                    ActionScheduler.Add(Path, () => ActiveApplicator.ApplySDR(calibration, reportSettings), HandleClampException);
+
+                    if (!ActiveApplicator.HandleProfile && (!ActiveApplicator.ProfileOptional || CreateProfile))
+                    {
+                        ActionScheduler.Add(Path, () =>
+                        {
+                            ColorProfileFactory.CreateProfile(ICCProfileNameSDR, calibration, reportSettings);
+                            DisplayColorProfileManager.ApplyProfile(Display, ICCProfileNameSDR, hdr: false, force: false);
+                        });
+                    }
                 }
             }
 
             if (CanClampHDR)
             {
-                Action createProfile = null;
+                Calibration calibration = null;
+                ReportSettings reportSettings = new ReportSettings();
+
+                if (Edid != null)
+                {
+                    reportSettings.ManufacturerId = Edid.ManufacturerId;
+                    reportSettings.ProductCodeId = Edid.ProductCodeId;
+                }
+
+                reportSettings.IncludeMHC2 = true;
+                reportSettings.CurvesResolution = ActiveApplicator.SupportCurveResolution ? CurveResolution : 256;
+                reportSettings.CurveOverride = new SrgbEOTF();
+                reportSettings.PeakLuminanceOverride = OverrideMetadataHDR ? (double?)PeakLuminanceHDR : null;
+                reportSettings.MaxFullFrameLuminanceOverride = OverrideMetadataHDR ? (double?)MaxFullFrameLuminanceHDR : null;
+                reportSettings.MinLuminanceOverride = OverrideMetadataHDR ? (double?)MinLuminanceHDR : null;
 
                 if (UseIccHDR)
                 {
                     var profile = ICCMatrixProfile.FromFile(ProfilePathHDR);
 
-
-                    Matrix matrixWhite = Matrix.Identity();
+                    Matrix rgbGains = Matrix.One3x1();
                     if (!TargetWhitePointHDR.Equals(Colorimetry.NativeWhite))
                     {
-                        matrixWhite = Colorimetry.CreateWhiteMatrix(profile.matrix, profile.whitePoint, TargetWhitePointHDR);
+                        rgbGains = Colorimetry.RGBGainsForWhite(profile.matrix, profile.whitePoint, TargetWhitePointHDR);
                     }
 
-                    double luminance = profile.Luminance(matrixWhite);
+                    double luminance = profile.Luminance(rgbGains);
 
                     ToneCurve gamma = null;
                     if (CalibrateGammaHDR)
                     {
                         gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, luminance, BPCThreshold);
-                        luminance = profile.Luminance(matrixWhite, gamma);
+                        luminance = profile.Luminance(rgbGains, gamma);
                     }
-                    createProfile = () =>
-                    {
-                        ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, profile, Colorimetry.Native, TargetWhitePointHDR, luminance,
-                                gamma: gamma,
-                                curve: new SrgbEOTF(),
-                                peakLuminanceOverride: OverrideMetadataHDR ? (double?)PeakLuminanceHDR : null,
-                                maxFullFrameLuminanceOverride: OverrideMetadataHDR ? (double?)MaxFullFrameLuminanceHDR : null,
-                                minLuminanceOverride: OverrideMetadataHDR ? (double?)MinLuminanceHDR : null);
-                    };
 
+                    calibration = new Calibration(profile, Colorimetry.Native, TargetWhitePointHDR, luminance, gamma: gamma);
                 }
                 else if (OverrideMetadataHDR)
                 {
-                    createProfile = () =>
-                    {
-                        ColorProfileFactory.CreateProfile(MHCProfileNameHDR, CurveResolution, Edid, PeakLuminanceHDR, MaxFullFrameLuminanceHDR, MinLuminanceHDR);
-                    };
+                    calibration = new Calibration(Edid, Colorimetry.Native, Colorimetry.NativeWhite);
                 }
 
-                if(createProfile != null)
+                if (calibration != null)
                 {
-                    ScheduleCreateProfile(createProfile);
-                    ScheduleApplyProfile(MHCProfileNameHDR, true);
+                    ActionScheduler.Add(Path, () => ActiveApplicator.ApplyHDR(calibration, reportSettings), HandleClampException);
                 }
-            }   
+            }
+        }
+
+        public void ReapplyClamp()
+        {
+            try
+            {
+                var clamped = CanClamp && Clamp;
+                UpdateClamp(clamped);
+                _clamped = clamped;
+                OnPropertyChanged(nameof(CanClamp));
+                OnPropertyChanged(nameof(Clamped));
+            }
+            catch (Exception e)
+            {
+                HandleClampException(e);
+            }
         }
 
         private void HandleClampException(Exception e)
@@ -357,7 +267,7 @@ namespace msovideo_srgb
             try
             {
                 _clamped = false;
-                if (Clamp || IsManagedProfileActive(false) || IsManagedProfileActive(true))
+                if (Clamp || ActiveApplicator?.IsCalibrationActiveSDR == true || ActiveApplicator?.IsCalibrationActiveHDR == true)
                 {
                     _clamped = null;
                 }
@@ -372,7 +282,7 @@ namespace msovideo_srgb
                 OnPropertyChanged(nameof(Clamped));
             });
         }
-        
+
         public bool? Clamped
         {
             set
@@ -397,42 +307,38 @@ namespace msovideo_srgb
             get => _clamped;
         }
 
-        public void ReapplyClamp()
-        {
-            try
-            {
-                var clamped = CanClamp && Clamp;
-                UpdateClamp(clamped);
-                _clamped = clamped;
-                OnPropertyChanged(nameof(CanClamp));
-                OnPropertyChanged(nameof(Clamped));
-            }
-            catch (Exception e)
-            {
-                HandleClampException(e);
-            }
-        }
+        public CalibrationApplicator ActiveApplicator => Applicator >= 0 && Applicator < Applicators.Length ? Applicators[Applicator] : null;
+
+        public bool CanClamp => ActiveApplicator != null && ActiveApplicator.CanClamp && (CanClampSDR || CanClampHDR);
+
+        public bool CanClampSDR => ActiveApplicator.CanClampSDR && (UseEdid || (UseIcc && ProfilePath != ""));
+
+        public bool CanClampHDR => ActiveApplicator.SupportHDR && ActiveApplicator.CanClampHDR && ((UseIccHDR && ProfilePathHDR != "") || (OverrideMetadataHDR && !UseIccHDR));
 
         public string Name => Display.HaveFriendlyDeviceName ? Display.FriendlyDeviceName : Display.DeviceID;
         public string Path => Display.DevicePath;
-
-        public bool IsUnique => Display.IsSourceUnique;
 
         public bool HdrActive => Display.HdrActive;
         public bool AcmActive => Display.AcmActive;
 
         public string Mode => HdrActive && AcmActive ? "HDR/ACM" : HdrActive ? "HDR" : AcmActive ? "ACM" : "SDR";
 
-        public bool CanClamp => IsSupportMHC2 != false && IsUnique && (CanClampSDR || CanClampHDR);
-
-        public bool CanClampSDR => UseEdid || (UseIcc && ProfilePath != "");
-
-        public bool CanClampHDR => (UseIccHDR && ProfilePathHDR != "") || (OverrideMetadataHDR && !UseIccHDR);
-
         public bool UseEdid
         {
             set => UseIcc = !value;
             get => !UseIcc;
+        }
+
+        [Persistent("applicator", 0)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Applicator))]
+        public int Applicator
+        {
+            get => _applicator;
+            set
+            {
+                _applicator = value;
+                OnPropertyChanged(nameof(ActiveApplicator));
+            }
         }
 
         [Persistent("clamp", false)]
@@ -499,6 +405,10 @@ namespace msovideo_srgb
         [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.TargetWhite))]
         public double CustomWhiteY { set; get; }
 
+        [Persistent("create_profile", true)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Report))]
+        public bool CreateProfile { set; get; }
+
         [Persistent("report_white_d65", false)]
         [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Report))]
         public bool ReportWhiteD65 { set; get; }
@@ -563,7 +473,23 @@ namespace msovideo_srgb
         [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.OverrideMetadataHDR))]
         public double MinLuminanceHDR { set; get; }
 
-        private Colorimetry.ColorSpace TargetColorSpace => !AcmActive ? Colorimetry.ColorSpaces[Target]: Colorimetry.Native;
+        [Persistent("dithering_applicaton", -1)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Dithering))]
+        public int DitheringApplicator { set; get; }
+
+        [Persistent("dithering_state", -1)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Dithering))]
+        public int DitheringState { set; get; }
+
+        [Persistent("dithering_bits", -1)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Dithering))]
+        public int DitheringBits { set; get; }
+
+        [Persistent("dithering_mode", -1)]
+        [BindToProperty(typeof(SettingsSourceMap), nameof(SettingsSourceMap.Dithering))]
+        public int DitheringMode { set; get; }
+
+        private Colorimetry.ColorSpace TargetColorSpace => !AcmActive ? Colorimetry.ColorSpaces[Target] : Colorimetry.Native;
 
         private uint[] Resolutions = new uint[] { 256, 1024, 4096 };
         private uint CurveResolution => Resolutions[Resolution];

@@ -41,9 +41,7 @@
             </WrapPanel>
         </Grid>
         <Grid Margin="0,0,0,6">
-        <DataGrid x:Name="MonitorsGrid"  ItemsSource="{Binding Monitors}" RowHeaderWidth="0" AutoGenerateColumns="False"
-                DockPanel.Dock="Top" CanUserResizeColumns="False" CanUserSortColumns="False"
-                CanUserReorderColumns="False">
+        <DataGrid x:Name="MonitorsGrid" ItemsSource="{Binding Monitors}" RowHeaderWidth="0" AutoGenerateColumns="False" DockPanel.Dock="Top" CanUserResizeColumns="False" CanUserSortColumns="False" CanUserReorderColumns="False" Padding="0,0,0,21.5" >
             <DataGrid.Resources>
                 <Style TargetType="{x:Type DataGridCell}">
                     <Setter Property="Template">
@@ -61,6 +59,19 @@
                 <DataGridTextColumn Header="#" Binding="{Binding Number}" IsReadOnly="True" />
                 <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Name}" IsReadOnly="True" />
                 <DataGridTextColumn Header="Mode" Width="65" Binding="{Binding Mode}" IsReadOnly="True">
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="TextAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Applicator" Width="65" Binding="{Binding ActiveApplicator.Name}" IsReadOnly="True">
                     <DataGridTextColumn.HeaderStyle>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="HorizontalContentAlignment" Value="Center"/>

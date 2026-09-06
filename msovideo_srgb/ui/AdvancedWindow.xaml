@@ -24,17 +24,11 @@
         </Style>
     </Window.Resources>
     <StackPanel Margin="6,0,6,6">
-        <GroupBox Header="Calibration" Padding="6">
+        <StackPanel Margin="0,0,0,6">
+            <TextBlock TextWrapping="Wrap" Text="{Binding Warnings}" Visibility="{Binding WarningsVisibility, Mode=OneWay}" Width="270" Margin="0,6,0,0" HorizontalAlignment="Left" Foreground="Red" />
+        </StackPanel>
+        <StackPanel Visibility="{Binding ApplicatorAvailable, Mode=OneWay}">
             <StackPanel>
-                <StackPanel Margin="0,0,0,6">
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding MHC2SupportUnknownWarning}" Foreground="Red">MHC2 support unknown</TextBlock>
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding MHC2NotSupportedWarning}" Foreground="Red">MHC2 not supported</TextBlock>
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding DuplicateDesktopWarning}" Foreground="Red">Duplicate desktop mode – cannot clamp</TextBlock>
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding ProfilePathSDRWarning}" Foreground="Red">Profile path required – cannot clamp SDR</TextBlock>
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding ProfilePathHDRWarning}" Foreground="Red">Profile path required – cannot clamp HDR</TextBlock>
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding AcmWarning}" Foreground="Red">ACM is active - treat target as Native</TextBlock>
-                    <TextBlock TextWrapping="Wrap" Visibility="{Binding AcmWarning}" Foreground="Red">and ignore MHC2 profile report settings</TextBlock>
-                </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock VerticalAlignment="Center" Text="Target" />
                     <ComboBox SelectedIndex="{Binding Target}" Margin="6,0,0,0">
@@ -45,7 +39,7 @@
                         <ComboBoxItem>Native</ComboBoxItem>
                     </ComboBox>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6" Visibility="{Binding SupportCurveResolution, Mode=OneWay}">
                     <TextBlock VerticalAlignment="Center" Text="Curve resolution" />
                     <ComboBox SelectedIndex="{Binding Resolution}" Margin="6,0,0,0">
                         <ComboBoxItem>256</ComboBoxItem>
@@ -198,7 +192,7 @@
                                         </TextBox.Text>
                                     </TextBox>
                                 </StackPanel>
-                                <StackPanel Visibility="{Binding UseCustomGamma}" IsEnabled="{Binding CalibrateGamma}"
+                                <StackPanel Visibility="{Binding UseCustomGamma, Mode=OneWay}" IsEnabled="{Binding CalibrateGamma}"
                                         Orientation="Horizontal">
                                     <TextBlock VerticalAlignment="Center">with</TextBlock>
                                     <TextBox
@@ -216,28 +210,33 @@
                                     <TextBlock VerticalAlignment="Center" Margin="2,0,0,0">% black output offset</TextBlock>
                                 </StackPanel>
                                 <CheckBox IsChecked="{Binding UseVcgt}" Visibility="{Binding UseVcgtVisibility, Mode=OneWay}" VerticalAlignment="Center" Margin="0,3,0,3">Apply gamma calibration from VCGT</CheckBox>
-                                <CheckBox IsChecked="{Binding OptimizeMatrix}" VerticalAlignment="Center" Margin="0,3,0,0">Optimize CSC matrix for gamma</CheckBox>
+                                <CheckBox IsChecked="{Binding OptimizeMatrix}" Visibility="{Binding SupportMatrixOptimization, Mode=OneWay}" VerticalAlignment="Center" Margin="0,3,0,3">Optimize CSC matrix for gamma</CheckBox>
                             </StackPanel>
                         </RadioButton>
-                        <GroupBox Header="MHC2 Profile" Margin="0,6,0,0">
-                            <StackPanel Margin="0,6,0,0">
-                                <CheckBox IsChecked="{Binding ReportWhiteD65}" HorizontalContentAlignment="Stretch">
-                                    <TextBlock Text="Report D65 white" Margin="0,0,0,6" />
+                        <GroupBox Header="ICC Profile" Margin="0,6,0,0">
+                            <StackPanel>
+                                <CheckBox IsChecked="{Binding CreateProfile}" Visibility="{Binding ProfileOptional, Mode=OneWay}" HorizontalContentAlignment="Stretch" Margin="0,6,0,0">
+                                    <TextBlock Text="Create and apply"/>
                                 </CheckBox>
-                                <CheckBox IsChecked="{Binding ReportColorSpaceSRGB}" HorizontalContentAlignment="Stretch">
-                                    <TextBlock Text="Report sRGB color space" Margin="0,0,0,6" />
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ReportGammaSRGB}" HorizontalContentAlignment="Stretch">
-                                    <TextBlock Text="Report sRGB gamma" Margin="0,0,0,6" />
-                                </CheckBox>
-                                <CheckBox IsChecked="{Binding ExcludeHdrMetadata}" HorizontalContentAlignment="Stretch">
-                                    <TextBlock Text="Exclude HDR metadata" Margin="0,0,0,0" />
-                                </CheckBox>
+                                <StackPanel Visibility="{Binding ReportSettingsAvailable, Mode=OneWay}">
+                                    <CheckBox IsChecked="{Binding ReportWhiteD65}" HorizontalContentAlignment="Stretch" Margin="0,6,0,0">
+                                        <TextBlock Text="Report D65 white" />
+                                    </CheckBox>
+                                    <CheckBox IsChecked="{Binding ReportColorSpaceSRGB}" HorizontalContentAlignment="Stretch" Margin="0,6,0,0">
+                                        <TextBlock Text="Report sRGB color space" />
+                                    </CheckBox>
+                                    <CheckBox IsChecked="{Binding ReportGammaSRGB}" HorizontalContentAlignment="Stretch" Margin="0,6,0,0">
+                                        <TextBlock Text="Report sRGB gamma" />
+                                    </CheckBox>
+                                    <CheckBox IsChecked="{Binding ExcludeHdrMetadata}" Visibility="{Binding ProfileIncludeMHC2, Mode=OneWay}" HorizontalContentAlignment="Stretch" Margin="0,6,0,0">
+                                        <TextBlock Text="Exclude HDR metadata" />
+                                    </CheckBox>
+                                </StackPanel>
                             </StackPanel>
                         </GroupBox>
                     </StackPanel>
                 </GroupBox >
-                <GroupBox Header="HDR">
+                <GroupBox Header="HDR" Visibility="{Binding SupportHDR, Mode=OneWay}">
                     <StackPanel>
                         <StackPanel IsEnabled="{Binding UseIccHDR}" Orientation="Horizontal" Margin="0,0,0,6" >
                             <TextBlock VerticalAlignment="Center" Text="Target White" />
@@ -372,10 +371,37 @@
                     </StackPanel>
                 </GroupBox>
             </StackPanel>
-        </GroupBox>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
-            <Button Width="75" Click="OK_Click" Margin="0,0,6,0" IsDefault="True">OK</Button>
-            <Button Width="75" IsCancel="True">Cancel</Button>
         </StackPanel>
+        <GroupBox Header="Dithering" Visibility="{Binding SupportDithering}">
+            <Grid Margin="0,3,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Label HorizontalAlignment="Right">State</Label>
+                <ComboBox IsEnabled="{Binding Dithering.StateAvailable}" ItemsSource="{Binding Dithering.StateNames}" SelectedIndex="{Binding Dithering.State, Mode=TwoWay}" SelectionChanged="Dithering_SelectionChanged" VerticalAlignment="Center" Grid.Row="0" Grid.Column="1"/>
+                <Label HorizontalAlignment="Right" Grid.Row="1" Grid.Column="0">Bits</Label>
+                <ComboBox IsEnabled="{Binding Dithering.BitsAvailable}" ItemsSource="{Binding Dithering.BitsNames}" SelectedIndex="{Binding Dithering.Bits, Mode=TwoWay}" SelectionChanged="Dithering_SelectionChanged" VerticalAlignment="Center" Grid.Row="1" Grid.Column="1"/>
+                <Label HorizontalAlignment="Right" Grid.Row="2" Grid.Column="0">Mode</Label>
+                <ComboBox IsEnabled="{Binding Dithering.ModeAvailable}" ItemsSource="{Binding Dithering.ModeNames}" SelectedIndex="{Binding Dithering.Mode, Mode=TwoWay}" SelectionChanged="Dithering_SelectionChanged" VerticalAlignment="Center" Grid.Row="2" Grid.Column="1"/>
+            </Grid>
+        </GroupBox>
+        <Grid Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            
+            <ComboBox Grid.Column="0" ItemsSource="{Binding Applicators}" SelectedIndex="{Binding Applicator}" DisplayMemberPath="Name" Margin="0,0,6,0" HorizontalAlignment="Left"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Width="75" Click="OK_Click" Margin="0,0,6,0" IsDefault="True">OK</Button>
+                <Button Width="75" IsCancel="True">Cancel</Button>
+            </StackPanel>
+        </Grid>
     </StackPanel>
 </Window>

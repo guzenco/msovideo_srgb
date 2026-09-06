@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace msovideo_srgb
 {
@@ -433,6 +436,148 @@ namespace msovideo_srgb
             }
 
             return outputCapabilities.SupportsMhc2;
+        }
+
+        public static string ProfileNameReset = "msovideo_srgb_no_transform.icm";
+        public static string ProfileNamePattern = @"^\[(?:SDR|HDR)\]\s.+#[^\s]+\.icm$";
+
+        public static string GetManagedProfileName(Display display, bool hdr)
+        {
+            string profileName;
+
+            if (display.HaveFriendlyDeviceName)
+            {
+                profileName = $"{display.FriendlyDeviceName} {display.DeviceID}#{display.InstanceID}";
+            }
+            else
+            {
+                profileName = $"{display.DeviceID}#{display.InstanceID}";
+            }
+
+            profileName = new string(profileName.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
+
+            return $"[{(hdr ? "HDR" : "SDR")}] {profileName}.icm";
+        }
+
+        public static void ApplyProfile(Display display, string profileName, bool hdr, bool force = true)
+        {
+            if (force)
+            {
+                ColorProfileFactory.CreateProfile(ProfileNameReset, 256);
+
+                AddAssociation(display, ProfileNameReset, hdr);
+                SetProfile(display, ProfileNameReset, hdr);
+
+                AddAssociation(display, profileName, hdr);
+                SetProfile(display, profileName, hdr);
+
+                RemoveAssociation(display, ProfileNameReset, hdr);
+            }
+            else
+            {
+                AddAssociation(display, profileName, hdr);
+                SetProfile(display, profileName, hdr);
+            }
+        }
+
+        public static void UnapplyProfile(Display display, string profileName, bool hdr, bool force = true)
+        {
+            if (force && GetProfile(display, hdr).Equals(profileName))
+            {
+                ColorProfileFactory.CreateProfile(ProfileNameReset, 256);
+
+                AddAssociation(display, ProfileNameReset, hdr);
+                SetProfile(display, ProfileNameReset, hdr);
+
+                RemoveAssociation(display, profileName, hdr);
+
+                RemoveAssociation(display, ProfileNameReset, hdr);             
+            }
+            else
+            {
+                RemoveAssociation(display, profileName, hdr);
+            }
+        }
+
+        public static bool IsManagedProfileActive(Display display, bool hdr)
+        {
+            string profileName = GetProfile(display, hdr);
+            if (Regex.IsMatch(profileName, ProfileNamePattern) && ICCProfileGenerator.IsGeneratedByThis(profileName))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static void RemoveWrongProfileAssociations(Display[] displays, string[] profileNames = null)
+        {
+            if (profileNames == null)
+            {
+                profileNames = GetAllProfiles();
+            }
+            if (profileNames == null) return;
+
+            foreach(Display display in displays)
+            {
+                RemoveWrongProfileAssociations(display, profileNames);
+            }
+        }
+
+        public static void RemoveWrongProfileAssociations(Display display, string[] profileNames = null)
+        {  
+            if(profileNames == null)
+            {
+                profileNames = GetAllProfiles();
+            }
+
+            if (profileNames == null) return;
+
+            List<string> profiles = profileNames.ToList();
+
+            string profileNameSDR = GetProfile(display, hdr: false);
+            if (profiles.Contains(profileNameSDR))
+            {
+                profiles.Remove(profileNameSDR);
+            }
+            else
+            {
+                profileNameSDR = "";
+            }
+
+            string profileNameHDR = GetProfile(display, hdr: true);
+            if (profiles.Contains(profileNameHDR))
+            {
+                profiles.Remove(profileNameHDR);
+            }
+            else
+            {
+                profileNameHDR = "";
+            }
+
+            foreach (string profileName in profiles)
+            {
+                if (!Regex.IsMatch(profileName, ProfileNamePattern)) continue;
+                if (!ICCProfileGenerator.IsGeneratedByThis(profileName)) continue;
+
+                if (profileNameSDR != "")
+                {
+                    RemoveAssociation(display, profileName, hdr: false);
+                }
+                if (profileNameHDR != "")
+                {
+                    RemoveAssociation(display, profileName, hdr: true);
+                }
+            }
+
+            if (profileNameSDR != GetManagedProfileName(display, false) && Regex.IsMatch(profileNameSDR, ProfileNamePattern) && ICCProfileGenerator.IsGeneratedByThis(profileNameSDR))
+            {
+                UnapplyProfile(display, profileNameSDR, hdr: false);
+            }
+
+            if (profileNameHDR != GetManagedProfileName(display, true) && Regex.IsMatch(profileNameHDR, ProfileNamePattern) && ICCProfileGenerator.IsGeneratedByThis(profileNameHDR))
+            {
+                UnapplyProfile(display, profileNameHDR, hdr: true);
+            }
         }
     }
 }
