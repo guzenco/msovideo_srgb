@@ -11,6 +11,7 @@ namespace msovideo_srgb
         public static readonly Func<Display, CalibrationApplicator>[] ApplicatorFactories = new Func<Display, CalibrationApplicator>[]
         {
             MHC2CalibrationApplicator.Init,
+            NVAPICalibrationApplicator.Init,
         };
 
         public event PropertyChangedEventHandler PropertyChanged;

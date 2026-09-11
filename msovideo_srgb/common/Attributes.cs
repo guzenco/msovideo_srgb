@@ -26,4 +26,15 @@ namespace msovideo_srgb
             Property = type.GetProperty(propertyName);
         }
     }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    public class ExternalFunctionAttribute : Attribute
+    {
+        public uint Id { get; }
+
+        public ExternalFunctionAttribute(uint id = 0)
+        {
+            Id = id;
+        }
+    }
 }

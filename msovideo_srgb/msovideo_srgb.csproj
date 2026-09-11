@@ -83,6 +83,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="applicators\NVAPICalibrationApplicator.cs" />
     <Compile Include="colorimetry\ParametricToneCurve.cs" />
     <Compile Include="colorimetry\ScaledToneCurve.cs" />
     <Compile Include="colorimetry\ST2084.cs" />
@@ -101,6 +102,8 @@
     <Compile Include="tools\ColorProfileFactory.cs" />
     <Compile Include="common\Config.cs" />
     <Compile Include="tools\dxgi\DisplayColorCapabilities.cs" />
+    <Compile Include="tools\dxgi\DXGISwapChainManager.cs" />
+    <Compile Include="tools\nvapi\NVDisplayColorManager.cs" />
     <Compile Include="tools\winapi\DisplayColorProfileManager.cs" />
     <Compile Include="tools\EnumExtensions.cs" />
     <Compile Include="tools\GlobalEventsObserver.cs" />

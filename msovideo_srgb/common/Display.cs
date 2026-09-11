@@ -7,6 +7,9 @@ namespace msovideo_srgb
         public string DevicePath { get; set; }
         public string FriendlyDeviceName { get; set; }
 
+        public LUID TargetAdapterId { get; set; }
+        public uint TargetId { get; set; }
+
         public bool IsSourceUnique { get; set; }
         public LUID SourceAdapterId { get; set; }
         public uint SourceId { get; set; }

@@ -42,6 +42,20 @@ namespace msovideo_srgb
             GlobalEventsObserver.OnSessionUnlock += _viewModel.OnDisplaySettingsChanged;
             GlobalEventsObserver.OnHotKey += _viewModel.OnHotkey;
 
+            if (WindowState != WindowState.Minimized)
+            {
+                Topmost = true;
+
+                ActionScheduler.Protect("focuse");
+                ActionScheduler.Add("focuse", () =>
+                {
+                    App.CurrentApp.Dispatcher.Invoke(() =>
+                    {
+                        Topmost = false;
+                    });
+                });
+            }
+
             InitializeTrayIcon();
         }
 

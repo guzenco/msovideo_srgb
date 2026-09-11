@@ -63,6 +63,9 @@ namespace msovideo_srgb
                 display.DevicePath = targetName.monitorDevicePath;
                 display.FriendlyDeviceName = targetName.monitorFriendlyDeviceName;
 
+                display.TargetAdapterId = target.adapterId;
+                display.TargetId = target.id;
+
                 display.IsSourceUnique = paths.Count(p => p.sourceInfo.Equals(source)) == 1;
 
                 display.SourceAdapterId = source.adapterId;

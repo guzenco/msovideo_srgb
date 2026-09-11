@@ -19,4 +19,13 @@ namespace msovideo_srgb
             : base($"{operation} failed for '{profilePath}' with error {errorCode}: {new Win32Exception(errorCode).Message}")
         { }
     }
+
+    public class ExternalAPIException : Exception
+    {
+        public ExternalAPIException(string message) : base(message) { }
+
+        public ExternalAPIException(string function, int errorCode)
+            : base($"{function} failed with error code {errorCode}")
+        { }
+    }
 }
