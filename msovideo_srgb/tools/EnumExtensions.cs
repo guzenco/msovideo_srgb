@@ -24,6 +24,11 @@ namespace msovideo_srgb
             return (T[])Enum.GetValues(typeof(T));
         }
 
+        public static string[] ToNames<T>() where T : Enum
+        {
+            return ToArray<T>().Select(e => e.GetDescription()).ToArray();
+        }
+
         public static object[] ToNamedArray<T>() where T : Enum
         {
             return ToArray<T>().Select(e => new { Name = e.GetDescription(), Value = e }).ToArray();

@@ -13,6 +13,7 @@ namespace msovideo_srgb
         public bool IsSourceUnique { get; set; }
         public LUID SourceAdapterId { get; set; }
         public uint SourceId { get; set; }
+        public string SourceAdapterName { get; set; }
         public string SourceDeviceName { get; set; }
 
         public bool HdrActive { get; set; }

@@ -83,6 +83,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="applicators\ADLCalibrationApplicator.cs" />
     <Compile Include="applicators\NVAPICalibrationApplicator.cs" />
     <Compile Include="colorimetry\ParametricToneCurve.cs" />
     <Compile Include="colorimetry\ScaledToneCurve.cs" />
@@ -99,6 +100,7 @@
     <Compile Include="applicators\CalibrationApplicator.cs" />
     <Compile Include="applicators\MHC2CalibrationApplicator.cs" />
     <Compile Include="icc\ICCProfileGenerator.cs" />
+    <Compile Include="tools\adl\ADLDisplayColorManager.cs" />
     <Compile Include="tools\ColorProfileFactory.cs" />
     <Compile Include="common\Config.cs" />
     <Compile Include="tools\dxgi\DisplayColorCapabilities.cs" />

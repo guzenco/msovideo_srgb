@@ -28,6 +28,9 @@ namespace msovideo_srgb
         [DllImport("user32")]
         private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_TARGET_DEVICE_NAME requestPacket);
 
+        [DllImport("user32")]
+        private static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_ADAPTER_NAME requestPacket);
+
         public static List<Display> GetDisplays()
         {
             var map = new List<Display>();
@@ -70,6 +73,18 @@ namespace msovideo_srgb
 
                 display.SourceAdapterId = source.adapterId;
                 display.SourceId = source.id;
+
+                var sourceAdapterName = new DISPLAYCONFIG_ADAPTER_NAME();
+                sourceAdapterName.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_ADAPTER_NAME;
+                sourceAdapterName.header.size = Marshal.SizeOf<DISPLAYCONFIG_ADAPTER_NAME>();
+                sourceAdapterName.header.adapterId = source.adapterId;
+
+                hr = DisplayConfigGetDeviceInfo(ref sourceAdapterName);
+
+                if (hr == 0)
+                {
+                    display.SourceAdapterName = sourceAdapterName.adapterDevicePath;
+                }
 
                 var sourceDeviceName = new DISPLAYCONFIG_SOURCE_DEVICE_NAME();
                 sourceDeviceName.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
@@ -450,6 +465,14 @@ namespace msovideo_srgb
         public string monitorFriendlyDeviceName;
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
         public string monitorDevicePath;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal struct DISPLAYCONFIG_ADAPTER_NAME
+    {
+        public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+        public string adapterDevicePath;
     }
 
     [StructLayout(LayoutKind.Sequential)]

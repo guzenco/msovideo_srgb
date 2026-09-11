@@ -12,6 +12,7 @@ namespace msovideo_srgb
         {
             MHC2CalibrationApplicator.Init,
             NVAPICalibrationApplicator.Init,
+            ADLCalibrationApplicator.Init,
         };
 
         public event PropertyChangedEventHandler PropertyChanged;

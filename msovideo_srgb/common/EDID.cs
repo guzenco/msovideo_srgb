@@ -19,6 +19,8 @@ namespace msovideo_srgb
             _data = data;
         }
 
+        public byte[] RawData => _data; 
+
         public uint ManufacturerId => (uint)(_data[0x09] << 8) | _data[0x08];
         public uint ProductCodeId => (uint)(_data[0x0B] << 8) | _data[0x0A];
 
