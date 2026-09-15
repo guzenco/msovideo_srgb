@@ -1,18 +1,14 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.Forms.MessageBox;
 using ContextMenuWF = System.Windows.Forms.ContextMenu;
 using MenuItemWF = System.Windows.Forms.MenuItem;
 using NotifyIcon = System.Windows.Forms.NotifyIcon;
-using System.Windows.Data;
 
 namespace msovideo_srgb
 {
@@ -151,6 +147,9 @@ namespace msovideo_srgb
         private void AdvancedButton_Click(object sender, RoutedEventArgs e)
         {
             if (Application.Current.Windows.Cast<Window>().Any(x => x is AdvancedWindow)) return;
+
+            DataGridSelectionHelper.EnsureSingleSelection(sender as FrameworkElement);
+
             var monitor = ((FrameworkElement)sender).DataContext as MonitorData;
             var window = new AdvancedWindow(monitor)
             {
@@ -172,18 +171,11 @@ namespace msovideo_srgb
 
         private void CheckBox_Toggled(object sender, RoutedEventArgs e)
         {
+            if (WindowState == WindowState.Minimized || !IsActive) return;
+
             if (sender is CheckBox checkBox)
             {
-                var binding = BindingOperations.GetBinding(checkBox, CheckBox.IsCheckedProperty);
-                string fieldName = binding?.Path?.Path;
-
-                if (fieldName == null) return;
-
-                foreach (var item in MonitorsGrid.SelectedItems)
-                {
-                    var prop = item.GetType().GetProperty(fieldName);
-                    prop?.SetValue(item, checkBox.IsChecked);
-                }
+                DataGridSelectionHelper.ApplyCheckBoxStateToSelection(checkBox);
             }
         }
 

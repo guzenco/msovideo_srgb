@@ -122,6 +122,7 @@
       <DependentUpon>PresetSettingsWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="ui\Dialogs.cs" />
+    <Compile Include="ui\utils\DataGridSelectionHelper.cs" />
     <Compile Include="ui\utils\RangeRule.cs" />
     <Compile Include="colorimetry\GammaToneCurve.cs" />
     <Compile Include="icc\ICCBinaryReader.cs" />

@@ -1,6 +1,5 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace msovideo_srgb
 {
@@ -24,16 +23,7 @@ namespace msovideo_srgb
         {
             if (sender is CheckBox checkBox)
             {
-                var binding = BindingOperations.GetBinding(checkBox, CheckBox.IsCheckedProperty);
-                string fieldName = binding?.Path?.Path;
-
-                if (fieldName == null) return;
-
-                foreach (var item in SettingsSourceMapGrid.SelectedItems)
-                {
-                    var prop = item.GetType().GetProperty(fieldName);
-                    prop?.SetValue(item, checkBox.IsChecked);
-                }
+                DataGridSelectionHelper.ApplyCheckBoxStateToSelection(checkBox);
             }
         }
 
