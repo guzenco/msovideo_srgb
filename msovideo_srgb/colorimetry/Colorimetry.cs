@@ -232,15 +232,20 @@ namespace msovideo_srgb
             return XYZToRGB(destination) * RGBToXYZ(source);
         }
 
-        public static Matrix RGBGainsForWhite(Matrix originPCS, Matrix whitePoint, Matrix targetWhitePoint)
+        public static Matrix RGBGainsForWhite(Matrix matrixXYZ, Matrix targetWhitePoint)
         {
-            Matrix rgbGains = PCSXYZToXYZ(originPCS, whitePoint).Inverse() * targetWhitePoint;
+            Matrix rgbGains = matrixXYZ.Inverse() * targetWhitePoint;
             return rgbGains / rgbGains.Max();
         }
 
-        public static Matrix RGBGainsForWhite(Matrix originPCS, Matrix whitePoint, Point targetWhitePoint)
+        public static Matrix RGBGainsForWhite(Matrix matrixXYZ, Point targetWhitePoint)
         {
-            return RGBGainsForWhite(originPCS, whitePoint, XYToXYZ(targetWhitePoint));
+            return RGBGainsForWhite(matrixXYZ, XYToXYZ(targetWhitePoint));
+        }
+
+        public static Matrix RGBGainsForWhite(Matrix matrixPCS, Matrix whitePoint, Matrix targetWhitePoint)
+        {
+            return RGBGainsForWhite(PCSXYZToXYZ(matrixPCS, whitePoint), targetWhitePoint);
         }
     }
 }

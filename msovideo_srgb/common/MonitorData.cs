@@ -132,7 +132,7 @@ namespace msovideo_srgb
                     Matrix rgbGains = Matrix.One3x1();
                     if (!TargetWhitePoint.Equals(Colorimetry.NativeWhite))
                     {
-                        rgbGains = Colorimetry.RGBGainsForWhite(profile.matrix, profile.whitePoint, TargetWhitePoint);
+                        rgbGains = Colorimetry.RGBGainsForWhite(profile.matrixXYZ, TargetWhitePoint);
                     }
 
                     double luminance = profile.Luminance(rgbGains);
@@ -219,7 +219,7 @@ namespace msovideo_srgb
                     Matrix rgbGains = Matrix.One3x1();
                     if (!TargetWhitePointHDR.Equals(Colorimetry.NativeWhite))
                     {
-                        rgbGains = Colorimetry.RGBGainsForWhite(profile.matrix, profile.whitePoint, TargetWhitePointHDR);
+                        rgbGains = Colorimetry.RGBGainsForWhite(profile.matrixXYZ, TargetWhitePointHDR);
                     }
 
                     double luminance = profile.Luminance(rgbGains);

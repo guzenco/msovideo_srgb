@@ -5,7 +5,8 @@ namespace msovideo_srgb
 {
     public class ICCMatrixProfile
     {
-        public Matrix matrix = Matrix.Zero3x3();
+        public Matrix matrixPCS = Matrix.Zero3x3();
+        public Matrix matrixXYZ = Matrix.Zero3x3();
         public ToneCurve[] trcs = new ToneCurve[3];
         public ToneCurve[] vcgt;
         public Matrix whitePoint = null;
@@ -23,7 +24,7 @@ namespace msovideo_srgb
                         { trcs[1].SampleAt(0) },
                         { trcs[2].SampleAt(0) }
                     });
-                return (matrix * trcBlacks)[1];
+                return (matrixXYZ * trcBlacks)[1];
             }
         }
 
@@ -81,7 +82,7 @@ namespace msovideo_srgb
                 gamma = new ScaledToneCurve(gamma, black: trcBlack);
                 scale *= gamma.SampleAt(1);
             }
-            return luminance * (matrix * Matrix.FromDiagonal(rgbGains) * scale)[1];
+            return luminance * (matrixXYZ * Matrix.FromDiagonal(rgbGains) * scale)[1];
         }
 
         private ICCMatrixProfile()
@@ -237,7 +238,7 @@ namespace msovideo_srgb
 
                         var M = Mprime * Matrix.FromDiagonal(Mprime.Inverse() * Colorimetry.D50);
                         var Minv = M.Inverse();
-                        result.matrix = M;
+                        result.matrixPCS = M;
 
                         const int trcSize = 4096;
                         var trcs = new double[3][];
@@ -325,7 +326,7 @@ namespace msovideo_srgb
 
                         for (var j = 0; j < 3; j++)
                         {
-                            result.matrix[j, index] = reader.ReadS15Fixed16();
+                            result.matrixPCS[j, index] = reader.ReadS15Fixed16();
                         }
 
                         seenTags++;
@@ -411,19 +412,30 @@ namespace msovideo_srgb
                     }
                 }
 
-                if (result.chromaticAdaptation != null)
+                if (!useCLUT && seenTags != 6)
                 {
-                    result.whitePoint = result.chromaticAdaptation.Inverse() * result.whitePoint;
+                    throw new ICCProfileException("Missing required tags for curves + matrix profile");
                 }
 
-                if (!useCLUT)
+                if(result.whitePoint == null)
                 {
-                    if (seenTags != 6)
-                    {
-                        throw new ICCProfileException("Missing required tags for curves + matrix profile");
-                    }
+                    throw new ICCProfileException("Missing whitepoint tag");
+                }
 
-                    result.matrix = Colorimetry.XYZScaleToD50(result.matrix);
+                if (result.chromaticAdaptation != null)
+                {
+                    var inverseChromaticAdaptation = result.chromaticAdaptation.Inverse();
+                    result.whitePoint = inverseChromaticAdaptation * result.whitePoint;
+                    result.matrixXYZ = inverseChromaticAdaptation * result.matrixPCS;
+
+                    result.whitePoint /= result.whitePoint[1];
+                    result.matrixXYZ = Colorimetry.XYZScale(result.matrixXYZ, result.whitePoint);
+                }
+                else
+                {
+                    result.whitePoint /= result.whitePoint[1];
+                    result.matrixPCS = Colorimetry.XYZScaleToD50(result.matrixPCS);
+                    result.matrixXYZ = Colorimetry.PCSXYZToXYZ(result.matrixPCS, result.whitePoint);
                 }
             }
 

@@ -80,7 +80,7 @@ namespace msovideo_srgb
             bool useVcgt = false,
             ToneCurve gamma = null)
         {
-            NativeColorSpacePCS = profile.matrix;
+            NativeColorSpacePCS = Colorimetry.XYZToPCSXYZ(profile.matrixXYZ, profile.whitePoint);
             NativeColorSpace = new Colorimetry.ColorSpace(Colorimetry.PCSXYZToXYZ(NativeColorSpacePCS, Colorimetry.XYToXYZ(Colorimetry.D65)));
             NativeWhite = profile.whitePoint;
             
