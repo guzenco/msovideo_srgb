@@ -10,32 +10,30 @@ namespace msovideo_srgb
         private const double c2 = 2413.0 / 128.0;
         private const double c3 = 2392.0 / 128.0;
 
-        private double _maxLuminance;
         private double _displayMaxLuminance;
         private double _displayMinLuminance;
         private double _bpsThreashold;
 
-        public ST2084(double maxLuminance = 10000.0, double displayMinLuminance = 0, double displayMaxLuminance = 10000.0, double bpsThreashold = 0)
+        public ST2084(double displayMinLuminance = 0, double displayMaxLuminance = 10000.0, double bpsThreashold = 0)
         {
-            _maxLuminance = maxLuminance;
             _displayMinLuminance = displayMinLuminance;
             _displayMaxLuminance = displayMaxLuminance;
-            _bpsThreashold = bpsThreashold;
+            _bpsThreashold = Math.Min(bpsThreashold, _displayMaxLuminance);
         }
 
-        public bool IsAbsolute() => true;
+        public bool IsAbsolute() => false;
 
         public double SampleAt(double x)
         {
             double pow = Math.Pow(x, 1.0 / m2);
             double L = 10000 * Math.Pow(Math.Max(pow - c1, 0) / (c2 - c3 * pow), 1.0 / m1);
 
-            L = Math.Min(L, _maxLuminance);
-
             if (L < _bpsThreashold)
             {
                 L = _displayMinLuminance + L / _bpsThreashold * (_bpsThreashold - _displayMinLuminance);
             }
+
+            L = Math.Max(L, _displayMinLuminance);
 
             L /= _displayMaxLuminance;
 

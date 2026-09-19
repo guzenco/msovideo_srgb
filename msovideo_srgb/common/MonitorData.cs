@@ -223,12 +223,12 @@ namespace msovideo_srgb
                     }
 
                     double luminance = profile.Luminance(rgbGains);
+                    luminance = Math.Min(luminance, TargetPeak);
 
                     ToneCurve gamma = null;
                     if (CalibrateGammaHDR)
                     {
-                        gamma = new ST2084(TargetPeak, profile.trcBlack * profile.luminance, luminance, BPCThreshold);
-                        luminance = profile.Luminance(rgbGains, gamma);
+                        gamma = new ST2084(profile.tagBlack * profile.luminance, luminance, BPCThreshold);
                     }
 
                     calibration = new Calibration(profile, Colorimetry.Native, TargetWhitePointHDR, luminance, gamma: gamma);
