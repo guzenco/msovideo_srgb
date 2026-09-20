@@ -1,6 +1,7 @@
 ## [Download latest release](https://github.com/guzenco/msovideo_srgb/releases/latest/)
 
 # About
+
 This tool uses an ICC profile with the MHC2 tag (or, if selected, a GPU driver API) to convert colors before sending them to a wide gamut display to effectively clamp it to sRGB (alternatively: Display P3, Adobe RGB, or BT.2020), based on the chromaticities provided in its EDID.
 
 ICC profiles are also supported and can be used in two different ways. By default, only the primary coordinates from the ICC profile will be used in place of the values reported in the EDID. This is useful if you want to use a profile created by someone else without taking their gamma/grayscale balance data into account, as that can vary a lot between units. If you enable the `Calibrate gamma to` checkbox, a full LUT-Matrix-LUT calibration will be applied. This is similar to the hardware calibration supported by some displays and can be used to achieve great color and grayscale accuracy on well-behaved displays.
@@ -52,23 +53,29 @@ General recommendations for measurements:
 		* MHC2: You must ensure that the display does not have an active profile with the MHC2 tag.
 		* ACM: In this mode there is always a clamp. Although workarounds exist, they have drawbacks, so ACM must be disabled for measurements.
 	* NVIDIA:
-		* Reference mode: Must be disabled for the 1D LUT from the MHC2 profile to work, so it's better to disable it for measurements as well. Enabling it for use with NVAPI usually results in better and more consistent results, provided the measurements were taken with it enabled. Option available in the Display tab in NVIDIA App or NVIDIA Control Panel.
+		* Reference mode: Must be disabled for the 1D LUT from the MHC2 profile to work, so it is better to disable it for measurements as well. Enabling it for use with NVAPI usually results in better and more consistent results, provided the measurements were taken with it enabled. Option available in the Display tab in NVIDIA App or NVIDIA Control Panel.
 		* NVAPI: If you use software that applies a clamp through this, disable it.
 	* AMD:
 		* Custom Color: It applies driver level clamp, you must disable it. Option available in Display tab in AMD Software. 
 		* ADL/ADLX: If you use software that applies a clamp through these APIs, disable it.
 * Identical dithering settings must be used for both measurement and profile use. Usually, enabling dithering improves results. For more details, see the section "Dithering" below.
 * Do not use calibration options (like gamma, whitepoint, blackpoint, luminance, etc.) in measurement software. Set them to "Native" or "As measured". These calibrations utilize VCGT 1D LUTs, and profiles with them describe the display's behavior under those LUTs. This usually takes more time to measure and usually produces worse results than the tool's calibration options. Using profiles with VCGT alongside the tool's calibration options usually yields results that are the same or worse compared to results with profiles without them.
+* If the display has local dimming zones, ensure that the measurement target fully covers at least one of them. When the number of local dimming zones is low, such that covering one requires a large target, it is better to disable local dimming.
 
 Recommendations for measurements in DisplayCAL:
-* Calibration tab: 
+* Calibration settings: 
   * Tone curve: As measured (this disables calibration so you can freely use other settings for convenient interactive display adjustment)
   * Everything else: As measured (or target if using interactive display adjustment)
-* Profile tab:
+* Profiling settings, variant 1:
   * Profile type: Curves + matrix ("Black point compensation" disabled)
   * Profile quality: High
   * Testchart: Small testchart for matrix profiles (with a high number of neutral (grayscale) patches, such as 256)
-  
+* Profiling settings, variant 2 (preferable):
+  * Profile type: XYZ LUT (with all options unchecked in the advanced options, which opens through the gear button)
+  * Profile quality: High
+  * Testchart: Default testchart (with a high number of neutral (grayscale) patches, such as 256)
+* Although both variants of profiling settings produce similar results in SDR, using variant 1 in HDR causes a noticeable black crush. Therefore, variant 2 is considered more stable and accurate, as it performs consistently across both modes.
+
 Verification of calibration in DisplayCAL:
 * Simulation profile (checked): profile of target color space ("sRGB IEC61966-2.1" for sRGB, for example)
 * Use simulation profile as display profile (checked)
@@ -92,6 +99,8 @@ To achieve this, you can use [dogegen](https://github.com/ledoge/dogegen):
 dogegen.exe "resolve_hdr 127.0.0.1"
 ```
  5. Measure targets displayed in the dogegen window.
+
+Usually, displays in HDR mode cannot sustain high luminance across large areas for extended periods of time. Therefore, the smaller the measurement target, the better, as long as it fully covers at least one of the local dimming zones, if such are present. Additionally, "Maximize luma difference" testchart patch sequence can be used to alternate between bright and dark patches, thus limiting luminance loss for bright patches.
 
 Tool settings:
 * Peak target - Limits display luminance in HDR mode. It will be ignored if set higher than the display profile luminance.
