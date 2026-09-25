@@ -669,11 +669,21 @@ namespace msovideo_srgb
                     }
                 }
 
+                foreach (var exception in _monitor.Exceptions)
+                {
+                    warnings.Add(exception.Message);
+                }
+
                 WarningsVisibility = warnings.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
                 OnPropertyChanged(nameof(WarningsVisibility));
 
-                return string.Join("\n", warnings);
+                return string.Join(Environment.NewLine, warnings);
             }
+        }
+
+        public void OnWarningsChange()
+        {
+            OnPropertyChanged(nameof(Warnings));
         }
 
         public Visibility WarningsVisibility { get; set; }

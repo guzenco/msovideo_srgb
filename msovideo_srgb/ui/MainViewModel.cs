@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -16,6 +17,9 @@ namespace msovideo_srgb
     public class MainViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
+        public event EventHandler OnUpdateMonitors;
+        public event Action<string> OnShowExceptions;
+        public event Action OnHideExceptions;
 
         public ObservableCollection<MonitorData> Monitors { get; }
         public ObservableCollection<Preset> Presets { get; }
@@ -122,6 +126,9 @@ namespace msovideo_srgb
         private void UpdateMonitors(bool reaply = true)
         {
             ActionScheduler.ClearAll();
+
+            OnUpdateMonitors?.Invoke(null, null);
+
             Monitors.Clear();
 
             var displays = DisplayConfigManager.GetDisplays();
@@ -221,7 +228,69 @@ namespace msovideo_srgb
             {
                 DisplayColorProfileManager.RemoveWrongProfileAssociations(Monitors.Select(m => m.Display).ToArray());
             }
-            catch (Exception) { }
+            catch (Exception e)
+            {
+                Trace.WriteLine(e);
+            }
+        }
+
+        public void ShowExceptions()
+        {
+            try
+            {
+                if (Monitors.Count == 0) return;
+
+                var lines = new List<string>();
+
+                foreach (var monitor in Monitors)
+                {
+                    if (monitor.Exceptions.Count == 0) continue;
+
+                    if (lines.Count > 0)
+                    {
+                        lines.Add("");
+                    }
+
+                    lines.Add($"{monitor.Name} ({monitor.Display.DeviceID}#{monitor.Display.InstanceID}):");
+
+                    foreach (var exception in monitor.Exceptions)
+                    {
+                        lines.Add(exception.Message);
+                    }
+                }
+
+                if (lines.Count == 0) return;
+
+                string text = string.Join(Environment.NewLine, lines);
+
+                OnShowExceptions?.Invoke(text);
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine(e);
+            }
+        }
+
+        private int _showExceptionsId = 0;
+        public void DelayedShowExceptions()
+        {
+            int updateId = _lastUpdateId;
+            int id = ++_showExceptionsId;
+            Thread.Sleep(1000);
+            if (id == _showExceptionsId && updateId == _updateId)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(ShowExceptions);
+            }
+        }
+
+        public void OnException()
+        {
+            Task.Run(DelayedShowExceptions);
+        }
+
+        public void OnExceptionsClear()
+        {
+            OnHideExceptions?.Invoke();
         }
 
         public void ReapplyAll()
@@ -233,10 +302,14 @@ namespace msovideo_srgb
                     monitor.ReapplyClamp();
                 }
             }
-            catch (InvalidOperationException) { }
+            catch (Exception e)
+            {
+                Trace.WriteLine(e);
+            }
         }
 
         private int _updateId = 0;
+        private int _lastUpdateId = 0;
         public void DelayedUpdateMonitors()
         {
             int id = ++_updateId;
@@ -244,11 +317,13 @@ namespace msovideo_srgb
             if (_updateId == id)
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(UpdateMonitorsHard);
+                _lastUpdateId = id;
             }
         }
 
         public void OnDisplaySettingsChanged(object sender, EventArgs e)
         {
+            System.Windows.Application.Current.Dispatcher.Invoke(ActionScheduler.ClearAll);
             Task.Run(DelayedUpdateMonitors);
         }
 

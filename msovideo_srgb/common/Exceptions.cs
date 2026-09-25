@@ -13,6 +13,13 @@ namespace msovideo_srgb
         public EDIDException(string message) : base(message) { }
     }
 
+    public class DisplayNotFoundException : Exception
+    {
+        public DisplayNotFoundException() 
+            : base($"Display not found") 
+        { }
+    }
+
     public class ColorProfileOperationException : Exception
     {
         public ColorProfileOperationException(string operation, string profilePath, int errorCode) 

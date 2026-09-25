@@ -55,6 +55,11 @@ namespace msovideo_srgb
             DialogResult = true;
         }
 
+        public void OnWarningsChange()
+        {
+            _viewModel.OnWarningsChange();
+        }
+
         public string[] ChangedProperties => _viewModel.ChangedProperties.ToArray();
     }
 }

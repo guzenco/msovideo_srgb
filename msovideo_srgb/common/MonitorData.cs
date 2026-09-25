@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -35,6 +36,8 @@ namespace msovideo_srgb
             Applicators = ApplicatorFactories.Select(init => init(Display)).Where(a => a != null).ToArray();
 
             ICCProfileNameSDR = DisplayColorProfileManager.GetManagedProfileName(Display, false);
+
+            Exceptions = new List<Exception>();
         }
 
         public int Number { get; }
@@ -42,6 +45,7 @@ namespace msovideo_srgb
         public Display Display { get; }
         public CalibrationApplicator[] Applicators { get; }
         public string ICCProfileNameSDR { get; }
+        public List<Exception> Exceptions { get; }
 
         private void UpdateClamp(bool doClamp)
         {
@@ -51,18 +55,18 @@ namespace msovideo_srgb
             if (DitheringApplicator >= 0 && DitheringApplicator < Applicators.Length && Applicators[DitheringApplicator].RequiresDitheringRestore)
             {
                 Dithering dithering = new Dithering(DitheringState, DitheringBits, DitheringMode);
-                ActionScheduler.Add(Path, () => Applicators[DitheringApplicator].Dithering = dithering);
+                ActionScheduler.Add(Path, () => Applicators[DitheringApplicator].Dithering = dithering, HandleNonCriticalException);
             }
 
             foreach (var applicator in Applicators)
             {
                 if (applicator == ActiveApplicator) continue;
 
-                ActionScheduler.Add(Path, applicator.Prepare);
-                ActionScheduler.Add(Path, applicator.UnapplySDR);
+                ActionScheduler.Add(Path, applicator.Prepare, HandleNonCriticalException);
+                ActionScheduler.Add(Path, applicator.UnapplySDR, HandleNonCriticalException);
                 if (applicator.SupportHDR)
                 {
-                    ActionScheduler.Add(Path, applicator.UnapplyHDR);
+                    ActionScheduler.Add(Path, applicator.UnapplyHDR, HandleNonCriticalException);
                 }
             }
 
@@ -80,7 +84,7 @@ namespace msovideo_srgb
             }
             if (!ActiveApplicator.HandleProfile)
             {
-                ActionScheduler.Add(Path, () => DisplayColorProfileManager.UnapplyProfile(Display, ICCProfileNameSDR, hdr: false, force: false));
+                ActionScheduler.Add(Path, () => DisplayColorProfileManager.UnapplyProfile(Display, ICCProfileNameSDR, hdr: false, force: false), HandleNonCriticalException);
             }
 
             if (!doClamp || !CanClamp) return;
@@ -189,7 +193,7 @@ namespace msovideo_srgb
                         {
                             ColorProfileFactory.CreateProfile(ICCProfileNameSDR, calibration, reportSettings);
                             DisplayColorProfileManager.ApplyProfile(Display, ICCProfileNameSDR, hdr: false, force: false);
-                        });
+                        }, HandleNonCriticalException);
                     }
                 }
             }
@@ -249,6 +253,8 @@ namespace msovideo_srgb
         {
             try
             {
+                Exceptions.Clear();
+                _viewModel.OnExceptionsClear();
                 var clamped = CanClamp && Clamp;
                 UpdateClamp(clamped);
                 _clamped = clamped;
@@ -263,8 +269,14 @@ namespace msovideo_srgb
 
         private void HandleClampException(Exception e)
         {
-            ActionScheduler.Clear(Path);
-            MessageBox.Show(e.Message);
+            Exceptions.Add(e);
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ActionScheduler.Clear(Path);
+            });
+
+            _viewModel.OnException();
 
             try
             {
@@ -285,12 +297,19 @@ namespace msovideo_srgb
             });
         }
 
+        private void HandleNonCriticalException(Exception e)
+        {
+            Exceptions.Add(e);
+        }
+
         public bool? Clamped
         {
             set
             {
                 try
                 {
+                    Exceptions.Clear();
+                    _viewModel.OnExceptionsClear();
                     Clamp = value == true;
                     UpdateClamp(value == true);
                     _clamped = Clamp;

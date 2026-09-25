@@ -10,12 +10,14 @@ namespace msovideo_srgb
 {
     public static class DisplayColorProfileManager
     {
-        internal const uint CLASS_MONITOR = 0x6D6E7472;
+        private const uint CLASS_MONITOR = 0x6D6E7472;
         private const uint PROFILE_FILENAME = 1;
         private const uint PROFILE_READ = 1;
         private const uint FILE_SHARE_READ = 1;
         private const uint FILE_SHARE_WRITE = 2;
         private const uint OPEN_EXISTING = 3;
+
+        private const int ProfileAssociationNotFoundHResult = unchecked((int)0x800707DF);
 
         public enum WcsProfileManagementScope : uint
         {
@@ -249,6 +251,20 @@ namespace msovideo_srgb
             }
         }
 
+        private static void HandleHResult(int hr)
+        {
+            if (hr == 0) return;
+
+            var exception = Marshal.GetExceptionForHR(hr);
+
+            if (exception is ArgumentException)
+            {
+                throw new DisplayNotFoundException();
+            }
+
+            Marshal.ThrowExceptionForHR(hr);
+        }
+
         public static void AddAssociation(Display display, string profileName, bool hdr)
         {
             int hr = ColorProfileAddDisplayAssociation(
@@ -259,7 +275,7 @@ namespace msovideo_srgb
                 false,
                 hdr);
 
-            if (hr != 0) Marshal.ThrowExceptionForHR(hr);
+            HandleHResult(hr);
         }
 
         public static void RemoveAssociation(Display display, string profileName, bool hdr)
@@ -269,8 +285,16 @@ namespace msovideo_srgb
                 profileName,
                 display.SourceAdapterId,
                 display.SourceId,
-                hdr);
+            hdr);
+
+            if (hr == ProfileAssociationNotFoundHResult)
+            {
+                return;
+            }
+
+            HandleHResult(hr);
         }
+
         public static string GetProfile(Display display, bool hdr)
         {
             IntPtr profileNamePtr;
@@ -289,7 +313,7 @@ namespace msovideo_srgb
                     return "";
                 }
 
-                Marshal.ThrowExceptionForHR(hr);
+                HandleHResult(hr);
             }
 
             try
@@ -316,11 +340,8 @@ namespace msovideo_srgb
                 hdr ? COLORPROFILESUBTYPE.CPST_EXTENDED_DISPLAY_COLOR_MODE : COLORPROFILESUBTYPE.CPST_STANDARD_DISPLAY_COLOR_MODE,
                 display.SourceAdapterId,
                 display.SourceId);
-
-            if (hr != 0)
-            {
-                Marshal.ThrowExceptionForHR(hr);
-            }
+            
+            HandleHResult(hr);
         }
 
         public static WcsProfileManagementScope GetDisplayUserScope(Display display)
@@ -331,10 +352,7 @@ namespace msovideo_srgb
                 display.SourceId,
                 out scope);
 
-            if (hr != 0)
-            {
-                Marshal.ThrowExceptionForHR(hr);
-            }
+            HandleHResult(hr);
 
             return scope;
         }

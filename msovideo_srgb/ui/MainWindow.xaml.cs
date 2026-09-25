@@ -18,6 +18,7 @@ namespace msovideo_srgb
 
         private ContextMenuWF _contextMenu;
         private AdvancedWindow _advancedWindow;
+        private Window _exceptionsWindow;
 
         private bool _autoclose = false;
 
@@ -30,7 +31,10 @@ namespace msovideo_srgb
 
             if (_autoclose) return;
 
-            SystemEvents.DisplaySettingsChanged += CloseAdvancedWindow;
+            _viewModel.OnUpdateMonitors += OnUpdateMonitors;
+            _viewModel.OnShowExceptions += OnShowExceptions;
+            _viewModel.OnHideExceptions += CloseExceptionsWindow;
+
             SystemEvents.DisplaySettingsChanged += _viewModel.OnDisplaySettingsChanged;
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
 
@@ -135,13 +139,48 @@ namespace msovideo_srgb
             window.ShowDialog();
         }
 
-        void CloseAdvancedWindow(object sender, EventArgs e)
+        private void OnUpdateMonitors(object sender, EventArgs e)
+        {
+            CloseAdvancedWindow();
+            CloseExceptionsWindow();
+        }
+
+        private void CloseAdvancedWindow()
         {
             if(_advancedWindow != null && _advancedWindow.DialogResult == null)
             {
                 _advancedWindow.Close();
                 _advancedWindow = null;
             }
+        }
+
+        private void CloseExceptionsWindow()
+        {
+            if (_exceptionsWindow != null && _exceptionsWindow.DialogResult == null)
+            {
+                _exceptionsWindow.Close();
+                _exceptionsWindow = null;
+            }
+            _advancedWindow?.OnWarningsChange();
+        }
+
+        private void OnShowExceptions(string text)
+        {
+            CloseExceptionsWindow();
+            var window = new Window();
+            window.Topmost = true;
+
+            if (WindowState != WindowState.Minimized)
+            {
+                window.Owner = this;
+            }
+
+            _exceptionsWindow = window;
+            Dialogs.NotifyDialog(text, window: window);
+            if(_exceptionsWindow == window)
+            {
+                _exceptionsWindow = null;
+            }         
         }
 
         private void AdvancedButton_Click(object sender, RoutedEventArgs e)
@@ -157,8 +196,11 @@ namespace msovideo_srgb
             };
 
             _advancedWindow = window;
-            bool? ok = window.ShowDialog();          
-            _advancedWindow = null;
+            bool? ok = window.ShowDialog();
+            if (_advancedWindow == window)
+            {
+                _advancedWindow = null;
+            }
 
             if (ok != true) return;
 
@@ -186,8 +228,6 @@ namespace msovideo_srgb
 
         private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            CloseAdvancedWindow(null, null);
-
             if (sender is ComboBox comboBox && comboBox.IsFocused)
             {
                 Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => comboBox.Focus()));
