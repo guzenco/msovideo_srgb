@@ -87,34 +87,6 @@ namespace msovideo_srgb
             return dialog.ShowDialog() == true;
         }
 
-        public static void NotifyDialog(string text, string title = "", Window window = null)
-        {
-            Window dialog = window ?? new Window
-            {
-                Owner = Application.Current.MainWindow,
-            };
-
-            dialog.Title = title;
-            dialog.SizeToContent = SizeToContent.WidthAndHeight;
-            dialog.ResizeMode = ResizeMode.NoResize;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
-            StackPanel panel = new StackPanel { Margin = new Thickness(10) };
-            Label label = new Label { Content = text, Padding = new Thickness(1, 1, 1, 1) };
-
-            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
-            Button okButton = new Button { Content = "OK", Width = 75, Margin = new Thickness(0, 0, 6, 0), IsDefault = true, IsCancel = true };
-
-            panel.Children.Add(label);
-
-            buttons.Children.Add(okButton);
-            panel.Children.Add(buttons);
-
-            dialog.Content = panel;
-
-            dialog.ShowDialog();
-        }
-
         public static Hotkey HotkeyDialog(Hotkey hotkey = null, string info = "", string title = "")
         {
             if (hotkey == null)

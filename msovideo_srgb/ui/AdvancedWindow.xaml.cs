@@ -55,11 +55,23 @@ namespace msovideo_srgb
             DialogResult = true;
         }
 
-        public void OnWarningsChange()
+        public void OnWarningsChanged()
         {
-            _viewModel.OnWarningsChange();
+            _viewModel.OnWarningsChanged();
         }
 
         public string[] ChangedProperties => _viewModel.ChangedProperties.ToArray();
+
+        private void WarningsPanel_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_viewModel.WaitingWarningsVisibilityChange)
+            {
+                if (e.WidthChanged && WarningsTextBlock.Width != e.NewSize.Width)
+                {
+                    WarningsTextBlock.Width = e.NewSize.Width;
+                }
+                _viewModel.OnWarningsVisibilityChanged();
+            }
+        }
     }
 }

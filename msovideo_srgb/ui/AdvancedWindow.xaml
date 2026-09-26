@@ -24,8 +24,8 @@
         </Style>
     </Window.Resources>
     <StackPanel Margin="6,0,6,6">
-        <StackPanel Margin="0,0,0,6">
-            <TextBlock TextWrapping="Wrap" Text="{Binding Warnings}" Visibility="{Binding WarningsVisibility, Mode=OneWay}" Width="270" Margin="0,6,0,0" HorizontalAlignment="Left" Foreground="Red" />
+        <StackPanel Margin="0,0,6,6" SizeChanged="WarningsPanel_SizeChanged">
+            <TextBlock x:Name="WarningsTextBlock" TextWrapping="Wrap" Visibility="{Binding WarningsVisibility, Mode=OneWay}" Text="{Binding Warnings}" Width="260" Margin="0,6,0,0" HorizontalAlignment="Left" Foreground="Red"/>
         </StackPanel>
         <StackPanel Visibility="{Binding ApplicatorAvailable, Mode=OneWay}">
             <StackPanel>

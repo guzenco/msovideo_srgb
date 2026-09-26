@@ -18,7 +18,7 @@ namespace msovideo_srgb
 
         private ContextMenuWF _contextMenu;
         private AdvancedWindow _advancedWindow;
-        private Window _exceptionsWindow;
+        private MessageWindow _exceptionsWindow;
 
         private bool _autoclose = false;
 
@@ -34,6 +34,7 @@ namespace msovideo_srgb
             _viewModel.OnUpdateMonitors += OnUpdateMonitors;
             _viewModel.OnShowExceptions += OnShowExceptions;
             _viewModel.OnHideExceptions += CloseExceptionsWindow;
+            _viewModel.OnExceptionsChanged += OnExceptionsChanged;
 
             SystemEvents.DisplaySettingsChanged += _viewModel.OnDisplaySettingsChanged;
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
@@ -69,13 +70,11 @@ namespace msovideo_srgb
             {
                 if (arg.Equals("-minimize", StringComparison.OrdinalIgnoreCase))
                 {
-                    WindowState = WindowState.Minimized;
-                    Hide();
+                    MinimizeToTray();
                 }
                 else if (arg.Equals("-autoclose", StringComparison.OrdinalIgnoreCase))
                 {
-                    WindowState = WindowState.Minimized;
-                    Hide();
+                    MinimizeToTray();
                     _autoclose = true;
                 }
                 else if (arg.StartsWith("-preset=", StringComparison.OrdinalIgnoreCase))
@@ -120,11 +119,35 @@ namespace msovideo_srgb
             }
         }
 
+        private void MinimizeToTray()
+        {
+            WindowState = WindowState.Minimized;
+            Hide();
+        }
+
+        private void RestoreFromTray()
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        private void PrepareToShowDialog()
+        {
+            CloseExceptionsWindow();
+        }
+
+        private bool? ShowDialogSafe(Window dialog)
+        {
+            PrepareToShowDialog();
+            return dialog.ShowDialog();
+        }
+
         protected override void OnStateChanged(EventArgs e)
         {
             if (WindowState == WindowState.Minimized)
             {
-                Hide();
+                MinimizeToTray();
             }
 
             base.OnStateChanged(e);
@@ -136,7 +159,7 @@ namespace msovideo_srgb
             {
                 Owner = this
             };
-            window.ShowDialog();
+            ShowDialogSafe(window);
         }
 
         private void OnUpdateMonitors(object sender, EventArgs e)
@@ -156,31 +179,33 @@ namespace msovideo_srgb
 
         private void CloseExceptionsWindow()
         {
-            if (_exceptionsWindow != null && _exceptionsWindow.DialogResult == null)
+            if (_exceptionsWindow != null)
             {
                 _exceptionsWindow.Close();
                 _exceptionsWindow = null;
             }
-            _advancedWindow?.OnWarningsChange();
         }
 
-        private void OnShowExceptions(string text)
+        private void OnShowExceptions(string exceptions)
         {
             CloseExceptionsWindow();
-            var window = new Window();
-            window.Topmost = true;
 
-            if (WindowState != WindowState.Minimized)
+            _exceptionsWindow = new MessageWindow()
             {
-                window.Owner = this;
+                Message = exceptions,
+                ParentWindow = this,
+                Topmost = true,
+            };
+
+            _exceptionsWindow.Show();
+        }
+
+        private void OnExceptionsChanged()
+        {
+            if(_advancedWindow != null && _advancedWindow.DialogResult == null)
+            {
+                _advancedWindow.OnWarningsChanged();
             }
-
-            _exceptionsWindow = window;
-            Dialogs.NotifyDialog(text, window: window);
-            if(_exceptionsWindow == window)
-            {
-                _exceptionsWindow = null;
-            }         
         }
 
         private void AdvancedButton_Click(object sender, RoutedEventArgs e)
@@ -196,7 +221,7 @@ namespace msovideo_srgb
             };
 
             _advancedWindow = window;
-            bool? ok = window.ShowDialog();
+            bool? ok = ShowDialogSafe(window);
             if (_advancedWindow == window)
             {
                 _advancedWindow = null;
@@ -249,6 +274,7 @@ namespace msovideo_srgb
         {
             if (sender is MenuItem menuItem && menuItem.DataContext is Preset preset)
             {
+                PrepareToShowDialog();
                 string action = menuItem.Header.ToString();
                 if (action == "Rename")
                 {
@@ -269,7 +295,13 @@ namespace msovideo_srgb
                         }
                         else
                         {
-                            Dialogs.NotifyDialog($"{hotkey}\nAlready used!", preset.Name);
+                            var messageWindow = new MessageWindow()
+                            {
+                                Title = preset.Name,
+                                Message = $"{hotkey}\nAlready used!",
+                                Owner = this
+                            };
+                            ShowDialogSafe(messageWindow);
                         }
                     }
                 }
@@ -311,8 +343,7 @@ namespace msovideo_srgb
             notifyIcon.MouseDoubleClick +=
                 delegate
                 {
-                    Show();
-                    WindowState = WindowState.Normal;
+                    RestoreFromTray();
                 };
 
             _contextMenu = new ContextMenuWF();

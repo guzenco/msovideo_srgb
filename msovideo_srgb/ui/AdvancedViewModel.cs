@@ -5,6 +5,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace msovideo_srgb
 {
@@ -644,7 +645,7 @@ namespace msovideo_srgb
             get => _customPercentage;
         }
 
-
+        public bool WaitingWarningsVisibilityChange { get; set; }
         public string Warnings
         {
             get
@@ -674,14 +675,26 @@ namespace msovideo_srgb
                     warnings.Add(exception.Message);
                 }
 
-                WarningsVisibility = warnings.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                WarningsVisibility = Visibility.Collapsed;
                 OnPropertyChanged(nameof(WarningsVisibility));
+                WarningsVisibility = warnings.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                WaitingWarningsVisibilityChange = true;
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(OnWarningsVisibilityChanged));
 
                 return string.Join(Environment.NewLine, warnings);
             }
         }
 
-        public void OnWarningsChange()
+        public void OnWarningsVisibilityChanged()
+        {
+            if (WaitingWarningsVisibilityChange)
+            {
+                WaitingWarningsVisibilityChange = false;
+                OnPropertyChanged(nameof(WarningsVisibility));
+            }
+        }
+
+        public void OnWarningsChanged()
         {
             OnPropertyChanged(nameof(Warnings));
         }
