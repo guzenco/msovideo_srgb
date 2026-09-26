@@ -117,6 +117,9 @@
     <Compile Include="colorimetry\LstarEOTF.cs" />
     <Compile Include="colorimetry\Lut16.cs" />
     <Compile Include="colorimetry\DoubleToneCurve.cs" />
+    <Compile Include="ui\ExceptionsWindow.xaml.cs">
+      <DependentUpon>ExceptionsWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ui\utils\ComboBoxTemplateSelector.cs" />
     <Compile Include="ui\PresetSettingsWindow.xaml.cs">
       <DependentUpon>PresetSettingsWindow.xaml</DependentUpon>
@@ -130,6 +133,10 @@
     <Compile Include="colorimetry\SrgbEOTF.cs" />
     <Compile Include="colorimetry\ToneCurve.cs" />
     <Page Include="ui\AboutWindow.xaml" />
+    <Page Include="ui\ExceptionsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="ui\PresetSettingsWindow.xaml">
       <SubType>Designer</SubType>
     </Page>

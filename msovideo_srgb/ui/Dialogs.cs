@@ -87,17 +87,16 @@ namespace msovideo_srgb
             return dialog.ShowDialog() == true;
         }
 
-        public static void NotifyDialog(string text, string title = "", Window window = null)
+        public static void NotifyDialog(string text, string title = "")
         {
-            Window dialog = window ?? new Window
+            Window dialog = new Window
             {
+                Title = title,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = Application.Current.MainWindow,
             };
-
-            dialog.Title = title;
-            dialog.SizeToContent = SizeToContent.WidthAndHeight;
-            dialog.ResizeMode = ResizeMode.NoResize;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
             StackPanel panel = new StackPanel { Margin = new Thickness(10) };
             Label label = new Label { Content = text, Padding = new Thickness(1, 1, 1, 1) };

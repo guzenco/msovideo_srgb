@@ -681,7 +681,7 @@ namespace msovideo_srgb
             }
         }
 
-        public void OnWarningsChange()
+        public void OnWarningsChanged()
         {
             OnPropertyChanged(nameof(Warnings));
         }

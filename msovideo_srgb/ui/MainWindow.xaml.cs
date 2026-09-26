@@ -18,7 +18,7 @@ namespace msovideo_srgb
 
         private ContextMenuWF _contextMenu;
         private AdvancedWindow _advancedWindow;
-        private Window _exceptionsWindow;
+        private ExceptionsWindow _exceptionsWindow;
 
         private bool _autoclose = false;
 
@@ -34,6 +34,7 @@ namespace msovideo_srgb
             _viewModel.OnUpdateMonitors += OnUpdateMonitors;
             _viewModel.OnShowExceptions += OnShowExceptions;
             _viewModel.OnHideExceptions += CloseExceptionsWindow;
+            _viewModel.OnExceptionsChanged += OnExceptionsChanged;
 
             SystemEvents.DisplaySettingsChanged += _viewModel.OnDisplaySettingsChanged;
             SystemEvents.PowerModeChanged += _viewModel.OnPowerModeChanged;
@@ -132,6 +133,7 @@ namespace msovideo_srgb
 
         private void AboutButton_Click(object sender, RoutedEventArgs o)
         {
+            CloseExceptionsWindow();
             var window = new AboutWindow
             {
                 Owner = this
@@ -156,37 +158,38 @@ namespace msovideo_srgb
 
         private void CloseExceptionsWindow()
         {
-            if (_exceptionsWindow != null && _exceptionsWindow.DialogResult == null)
+            if (_exceptionsWindow != null)
             {
-                _exceptionsWindow.Close();
+                _exceptionsWindow.SafeClose();
                 _exceptionsWindow = null;
             }
-            _advancedWindow?.OnWarningsChange();
         }
 
         private void OnShowExceptions(string text)
         {
             CloseExceptionsWindow();
-            var window = new Window();
-            window.Topmost = true;
 
-            if (WindowState != WindowState.Minimized)
+            _exceptionsWindow = new ExceptionsWindow(text)
             {
-                window.Owner = this;
+                OwnerWindow = this,
+            };
+
+            _exceptionsWindow.Show();
+        }
+
+        private void OnExceptionsChanged()
+        {
+            if(_advancedWindow != null && _advancedWindow.DialogResult == null)
+            {
+                _advancedWindow.OnWarningsChanged();
             }
-
-            _exceptionsWindow = window;
-            Dialogs.NotifyDialog(text, window: window);
-            if(_exceptionsWindow == window)
-            {
-                _exceptionsWindow = null;
-            }         
         }
 
         private void AdvancedButton_Click(object sender, RoutedEventArgs e)
         {
             if (Application.Current.Windows.Cast<Window>().Any(x => x is AdvancedWindow)) return;
 
+            CloseExceptionsWindow();
             DataGridSelectionHelper.EnsureSingleSelection(sender as FrameworkElement);
 
             var monitor = ((FrameworkElement)sender).DataContext as MonitorData;
@@ -249,6 +252,7 @@ namespace msovideo_srgb
         {
             if (sender is MenuItem menuItem && menuItem.DataContext is Preset preset)
             {
+                CloseExceptionsWindow();
                 string action = menuItem.Header.ToString();
                 if (action == "Rename")
                 {

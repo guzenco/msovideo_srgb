@@ -300,6 +300,7 @@ namespace msovideo_srgb
         private void HandleNonCriticalException(Exception e)
         {
             Exceptions.Add(e);
+            _viewModel.OnNonCriticalException();
         }
 
         public bool? Clamped

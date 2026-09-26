@@ -18,8 +18,10 @@ namespace msovideo_srgb
     {
         public event PropertyChangedEventHandler PropertyChanged;
         public event EventHandler OnUpdateMonitors;
+        
         public event Action<string> OnShowExceptions;
         public event Action OnHideExceptions;
+        public event Action OnExceptionsChanged;
 
         public ObservableCollection<MonitorData> Monitors { get; }
         public ObservableCollection<Preset> Presets { get; }
@@ -283,14 +285,31 @@ namespace msovideo_srgb
             }
         }
 
+        private void OnHideExceptionsInvoke()
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(() => OnHideExceptions?.Invoke());
+        }
+
+        private void OnExceptionsChangedInvoke()
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(() => OnExceptionsChanged?.Invoke());
+        }
+
         public void OnException()
         {
             Task.Run(DelayedShowExceptions);
+            Task.Run(OnExceptionsChangedInvoke);
+        }
+
+        public void OnNonCriticalException()
+        {
+            Task.Run(OnExceptionsChangedInvoke);
         }
 
         public void OnExceptionsClear()
         {
-            OnHideExceptions?.Invoke();
+            Task.Run(OnHideExceptionsInvoke);
+            Task.Run(OnExceptionsChangedInvoke);
         }
 
         public void ReapplyAll()
