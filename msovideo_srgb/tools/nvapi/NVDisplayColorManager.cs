@@ -32,6 +32,18 @@ namespace msovideo_srgb
         );
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int NvAPI_DISP_SetTargetGammaCorrectionDelegate(
+            uint displayId,
+            ref GammaCorrection gammaCorrection
+        );
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int NvAPI_DISP_ColorAccuracyModeDelegate(
+            uint displayId,
+            ref ColorAccuracyMode colorAccuracyMode
+        );
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int NvAPI_GPU_GetDitherControlDelegate(
             uint displayId,
             ref Dither dither
@@ -85,6 +97,12 @@ namespace msovideo_srgb
 
         [ExternalFunction(0xFCABD23A)]
         private static readonly NvAPI_GPU_SetColorSpaceConversionDelegate NvAPI_GPU_SetColorSpaceConversion;
+
+        [ExternalFunction(0x7082A053)]
+        private static readonly NvAPI_DISP_SetTargetGammaCorrectionDelegate NvAPI_DISP_SetTargetGammaCorrection;
+
+        [ExternalFunction(0xB5E8E855)]
+        private static readonly NvAPI_DISP_ColorAccuracyModeDelegate NvAPI_DISP_ColorAccuracyMode;
 
         [ExternalFunction(0x932AC8FB)]
         private static readonly NvAPI_GPU_GetDitherControlDelegate NvAPI_GPU_GetDitherControl;
@@ -205,6 +223,7 @@ namespace msovideo_srgb
             };
 
             SetColorSpaceConversion(displayId, csc);
+            SetTargetGammaCorrection(displayId, null);
         }
 
         public static void SetColorspaceConversion(uint displayId, Calibration calibration)
@@ -270,16 +289,20 @@ namespace msovideo_srgb
 
                 Func<int, double, float> deGamma;
                 Func<int, double, float> reGamma;
+                Func<int, double, float> gammaCorrection;
+
+                var srgb = new SrgbEOTF();
+                reGamma = (j, v) => (float)srgb.SampleInverseAt(v);
+
                 if (calibration.DeGamma != null)
                 {
                     deGamma = (j, v) => (float)calibration.DeGamma[j].SampleAt(v);
-                    reGamma = (j, v) => (float)calibration.ReGamma[j].SampleAt(v);
+                    gammaCorrection = (j, v) => (float)calibration.ReGamma[j].SampleAt(srgb.SampleAt(v));
                 }
                 else
                 {
-                    var srgb = new SrgbEOTF();
                     deGamma = (j, v) => (float)srgb.SampleAt(v);
-                    reGamma = (j, v) => (float)(srgb.SampleInverseAt(v) * calibration.ReGamma[j].SampleAt(calibration.RGBGains[j]));
+                    gammaCorrection = (j, v) => (float)(v * calibration.ReGamma[j].SampleAt(calibration.RGBGains[j]));
                 }
 
                 for (var i = 1; i < 1024; i++)
@@ -291,8 +314,20 @@ namespace msovideo_srgb
                         gamma[1, i, j] = reGamma(j, value);
                     }
                 }
-                
+
                 SetColorSpaceConversion(displayId, csc);
+                SetTargetGammaCorrection(displayId, gammaCorrection);
+                DisableReferenceMode(displayId);
+            }
+        }
+
+        public static void DisableReferenceMode(uint displayId)
+        {
+            uint mode = GetColorAccuracyMode(displayId);
+
+            if (mode == 2)
+            {
+                SetColorAccuracyMode(displayId, 1);
             }
         }
 
@@ -382,6 +417,72 @@ namespace msovideo_srgb
             if (status != 0)
             {
                 throw new ExternalAPIException(nameof(NvAPI_GPU_SetColorSpaceConversion), status);
+            }
+        }
+
+        private static void SetTargetGammaCorrection(uint displayId, Func<int, double, float> gamma)
+        {
+            var gammaCorrection = new GammaCorrection
+            {
+                version = 0x13008,
+                gamma = new float[3 * 1024],
+                action = 1,
+            };
+
+            if (gamma == null)
+            {
+                gamma = (j, v) => (float)v;
+            }
+
+            for (var i = 1; i < 1024; i++)
+            {
+                var value = i / 1023d;
+                for (var j = 0; j < 3; j++)
+                {
+                    gammaCorrection.gamma[i * 3 + j] = gamma(j, value);
+                }
+            }
+
+            int status = NvAPI_DISP_SetTargetGammaCorrection(displayId, ref gammaCorrection);
+
+            if (status != 0)
+            {
+                throw new ExternalAPIException(nameof(NvAPI_DISP_SetTargetGammaCorrection), status);
+            }
+        }
+
+        private static uint GetColorAccuracyMode(uint displayId)
+        {
+            var colorAccuracyMode = new ColorAccuracyMode
+            {
+                version = 0x1000C,
+                action = 1,
+            };
+
+            int status = NvAPI_DISP_ColorAccuracyMode(displayId, ref colorAccuracyMode);
+
+            if (status != 0)
+            {
+                throw new ExternalAPIException(nameof(NvAPI_DISP_ColorAccuracyMode), status);
+            }
+
+            return colorAccuracyMode.mode;
+        }
+
+        private static void SetColorAccuracyMode(uint displayId, uint mode)
+        {
+            var colorAccuracyMode = new ColorAccuracyMode
+            {
+                version = 0x1000C,
+                action = 2,
+                mode = mode,
+            };
+
+            int status = NvAPI_DISP_ColorAccuracyMode(displayId, ref colorAccuracyMode);
+
+            if (status != 0)
+            {
+                throw new ExternalAPIException(nameof(NvAPI_DISP_ColorAccuracyMode), status);
             }
         }
 
@@ -496,6 +597,23 @@ namespace msovideo_srgb
         public int mode;
         public uint bitsCaps;
         public uint modeCaps;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct GammaCorrection
+    {
+        public uint version; // 0x13008
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3 * 1024)]
+        public float[] gamma;
+        public uint action;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ColorAccuracyMode
+    {
+        public uint version; // 0x10008
+        public uint action;
+        public uint mode;
     }
 
     [StructLayout(LayoutKind.Sequential)]
