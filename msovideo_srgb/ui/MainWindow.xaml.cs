@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -63,7 +64,10 @@ namespace msovideo_srgb
         private void ProcessArgs()
         {
             var args = Environment.GetCommandLineArgs().ToList();
+            var fileNameArgs = Path.GetFileNameWithoutExtension(args[0]).Split(' ').Skip(1);
+            
             args.RemoveAt(0);
+            args.AddRange(fileNameArgs);
 
             string helpMessage = "";
             foreach (var arg in args)
@@ -92,6 +96,21 @@ namespace msovideo_srgb
                         helpMessage += $"Must be a number: {val}\n";
                     }
                 }
+                else if (arg.StartsWith("-delay=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string val = arg.Substring("-delay=".Length);
+                    if (int.TryParse(val, out int delay))
+                    {
+                        delay--;
+                        delay = Math.Max(delay, 0);
+                        delay = Math.Min(delay, 60000);
+                        _viewModel.ReapplyDelay = delay;
+                    }
+                    else
+                    {
+                        helpMessage += $"Must be a number: {val}\n";
+                    }
+                }
                 else if (arg.Equals("-force", StringComparison.OrdinalIgnoreCase)) { }
                 else
                 {
@@ -104,7 +123,8 @@ namespace msovideo_srgb
                 helpMessage += "-force\t\tClose other instances at startup\n";
                 helpMessage += "-minimize\tMinimize at startup\n";
                 helpMessage += "-autoclose\tClose after startup\n";
-                helpMessage += "-preset=<id>\tSet preset #<id> at startup";
+                helpMessage += "-preset=<id>\tSet preset #<id> at startup\n";
+                helpMessage += "-delay=<d>\tSet delay of #<d> ms for reapply that maintains clamp (default: 1000)";
 
                 MessageBox.Show(helpMessage);
             }

@@ -23,6 +23,7 @@ namespace msovideo_srgb
         public event Action OnHideExceptions;
         public event Action OnExceptionsChanged;
 
+        public int ReapplyDelay { get; set; }
         public ObservableCollection<MonitorData> Monitors { get; }
         public ObservableCollection<Preset> Presets { get; }
 
@@ -32,6 +33,7 @@ namespace msovideo_srgb
 
         public MainViewModel()
         {
+            ReapplyDelay = 1000;
             Monitors = new ObservableCollection<MonitorData>();
             Presets = new ObservableCollection<Preset>();
 
@@ -332,7 +334,7 @@ namespace msovideo_srgb
         public void DelayedUpdateMonitors()
         {
             int id = ++_updateId;
-            Thread.Sleep(1000);
+            Thread.Sleep(ReapplyDelay);
             if (_updateId == id)
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(UpdateMonitorsHard);
